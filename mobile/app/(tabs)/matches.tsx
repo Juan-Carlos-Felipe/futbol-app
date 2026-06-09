@@ -12,15 +12,11 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useMyMatches, useCreateMatch, Match, MatchStatus } from '@/hooks/useMatch';
+import { useMyMatches, useCreateMatch, Match } from '@/hooks/useMatch';
 import { useMyTeams } from '@/hooks/useTeams';
-
-const STATUS_LABELS: Record<MatchStatus, string> = {
-  seeking_opponent: 'Buscando rival',
-  confirmed: 'Confirmado',
-  played: 'Jugado',
-  cancelled: 'Cancelado',
-};
+import { theme } from '@/lib/theme';
+import { ResultBadge } from '@/components/ui/ResultBadge';
+import { MatchResultModal } from '@/components/ui/MatchResultModal';
 
 export default function MatchesScreen() {
   const router = useRouter();
@@ -31,6 +27,12 @@ export default function MatchesScreen() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [location, setLocation] = useState('');
+  const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [selectedResult, setSelectedResult] = useState<{ visible: boolean; result: 'win' | 'loss' | 'draw'; score: string }>({
+    visible: false,
+    result: 'win',
+    score: '0 - 0'
+  });
 
   async function handleCreate() {
     if (!selectedTeamId) return Alert.alert('Selecciona un equipo');
@@ -49,63 +51,115 @@ export default function MatchesScreen() {
     }
   }
 
+  const filteredMatches = matches?.filter(m => {
+    const isPast = new Date(m.scheduled_at) < new Date() || m.status === 'played';
+    if (filter === 'upcoming') return !isPast;
+    if (filter === 'past') return isPast;
+    return true;
+  });
+
   function renderItem({ item }: { item: Match }) {
+    const isPast = new Date(item.scheduled_at) < new Date() || item.status === 'played';
+    const result = (item.result as any)?.outcome as 'win' | 'loss' | 'draw' | undefined;
+
+    let borderColor = theme.colors.gray200;
+    if (item.status === 'played') {
+      if (result === 'win') borderColor = theme.colors.win;
+      else if (result === 'loss') borderColor = theme.colors.loss;
+      else if (result === 'draw') borderColor = theme.colors.draw;
+    } else if (item.status === 'confirmed') {
+      borderColor = theme.colors.gray400;
+    }
+
     return (
       <TouchableOpacity
-        style={styles.card}
-        onPress={() => router.push(`/match/${item.id}`)}
+        style={[styles.card, { borderLeftColor: borderColor, borderLeftWidth: 4 }]}
+        onPress={() => {
+          if (item.status === 'played' && result) {
+            setSelectedResult({
+              visible: true,
+              result: result,
+              score: (item.result as any)?.score || '0 - 0'
+            });
+          } else {
+            router.push(`/match/${item.id}`);
+          }
+        }}
       >
-        <View style={styles.cardHeader}>
-          <Text style={styles.date}>
-            {new Date(item.scheduled_at).toLocaleDateString('es-CL', {
-              day: 'numeric',
-              month: 'short',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </Text>
-          <Text style={styles.status}>{STATUS_LABELS[item.status]}</Text>
+        <View style={styles.cardContent}>
+          <View style={styles.cardMain}>
+            <Text style={styles.matchTeams}>Mi Equipo vs Rival</Text>
+            <Text style={styles.matchDate}>
+              {new Date(item.scheduled_at).toLocaleDateString('es-CL', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+          </View>
+
+          <View style={styles.cardRight}>
+            {item.status === 'played' ? (
+              <View style={styles.scoreContainer}>
+                <Text style={[styles.scoreText, result && { color: theme.colors[result] }]}>
+                  {(item.result as any)?.score || '0 - 0'}
+                </Text>
+                {result && <ResultBadge result={result} size="sm" />}
+              </View>
+            ) : (
+              <Text style={styles.pendingStatus}>PENDIENTE</Text>
+            )}
+          </View>
         </View>
-        {item.location ? (
-          <Text style={styles.location}>{item.location}</Text>
-        ) : null}
       </TouchableOpacity>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Partidos</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => {
-            if (!teams?.length) {
-              return Alert.alert('Sin equipos', 'Crea o únete a un equipo primero.');
-            }
-            setSelectedTeamId((teams[0] as { team_id: string }).team_id);
-            setShowCreate(true);
-          }}
-        >
-          <Text style={styles.addBtnText}>+ Crear</Text>
-        </TouchableOpacity>
+      <View style={styles.header}>
+        <Text style={styles.title}>MIS PARTIDOS</Text>
+
+        <View style={styles.filterRow}>
+          {(['upcoming', 'past', 'all'] as const).map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterChip, filter === f && styles.filterChipActive]}
+              onPress={() => setFilter(f)}
+            >
+              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                {f === 'upcoming' ? 'Próximos' : f === 'past' ? 'Pasados' : 'Todos'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => {
+              if (!teams?.length) {
+                return Alert.alert('Sin equipos', 'Crea o únete a un equipo primero.');
+              }
+              setSelectedTeamId((teams[0] as { team_id: string }).team_id);
+              setShowCreate(true);
+            }}
+          >
+            <Text style={styles.addBtnText}>+ NUEVO</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {isLoading ? (
-        <ActivityIndicator color="#22c55e" style={{ marginTop: 40 }} />
+        <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
-          data={matches}
+          data={filteredMatches}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🗓️</Text>
-              <Text style={styles.emptyText}>No hay partidos aún</Text>
-              <Text style={styles.emptyHint}>
-                Pulsa + Crear para programar un partido y convocar a tu equipo
-              </Text>
+              <Text style={styles.emptyText}>No hay partidos</Text>
             </View>
           }
         />
@@ -114,8 +168,8 @@ export default function MatchesScreen() {
       <Modal visible={showCreate} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Nuevo partido</Text>
-            <Text style={styles.modalLabel}>Equipo local</Text>
+            <Text style={styles.modalTitle}>NUEVO PARTIDO</Text>
+            <Text style={styles.modalLabel}>EQUIPO LOCAL</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {teams?.map((row) => {
                 const team = (Array.isArray(row.teams) ? row.teams[0] : row.teams) as { id: string; name: string };
@@ -129,7 +183,9 @@ export default function MatchesScreen() {
                     ]}
                     onPress={() => setSelectedTeamId(tid)}
                   >
-                    <Text style={styles.teamChipText}>{team?.name ?? 'Equipo'}</Text>
+                    <Text style={[styles.teamChipText, selectedTeamId === tid && styles.teamChipTextActive]}>
+                      {team?.name ?? 'Equipo'}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -137,18 +193,17 @@ export default function MatchesScreen() {
             <TextInput
               style={styles.input}
               placeholder="Lugar (opcional)"
-              placeholderTextColor="#666"
+              placeholderTextColor={theme.colors.gray400}
               value={location}
               onChangeText={setLocation}
             />
-            <Text style={styles.modalHint}>Fecha: mañana a la misma hora</Text>
             <TouchableOpacity
               style={styles.createBtn}
               onPress={handleCreate}
               disabled={createMatch.isPending}
             >
               <Text style={styles.createBtnText}>
-                {createMatch.isPending ? 'Creando...' : 'Crear partido'}
+                {createMatch.isPending ? 'CREANDO...' : 'CREAR PARTIDO'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowCreate(false)}>
@@ -157,85 +212,175 @@ export default function MatchesScreen() {
           </View>
         </View>
       </Modal>
+
+      <MatchResultModal
+        visible={selectedResult.visible}
+        onClose={() => setSelectedResult(prev => ({ ...prev, visible: false }))}
+        result={selectedResult.result}
+        score={selectedResult.score}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117' },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  container: { flex: 1, backgroundColor: theme.colors.gray50 },
+  header: {
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: theme.colors.white,
   },
-  title: { fontSize: 24, fontWeight: '800', color: '#fff' },
+  title: {
+    fontFamily: theme.fonts.display,
+    fontSize: 32,
+    color: theme.colors.gray900
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: theme.colors.gray100,
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  filterText: {
+    fontFamily: 'DMSans-Medium',
+    fontSize: 13,
+    color: theme.colors.gray600,
+  },
+  filterTextActive: {
+    color: theme.colors.white,
+  },
   addBtn: {
-    backgroundColor: '#22c55e',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    marginLeft: 'auto',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 10,
   },
-  addBtnText: { color: '#fff', fontWeight: '700' },
-  list: { padding: 24, paddingTop: 8, flexGrow: 1 },
+  addBtnText: {
+    color: theme.colors.white,
+    fontFamily: theme.fonts.display,
+    fontSize: 14
+  },
+  list: { padding: 24, paddingTop: 12, flexGrow: 1 },
   card: {
-    backgroundColor: '#1a1d27',
+    backgroundColor: theme.colors.white,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#2a2d3a',
+    ...theme.shadow.sm,
   },
-  cardHeader: {
+  cardContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  date: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  status: { color: '#22c55e', fontSize: 12, fontWeight: '600' },
-  location: { color: '#888', marginTop: 8, fontSize: 14 },
+  cardMain: {
+    flex: 1,
+  },
+  matchTeams: {
+    fontFamily: 'DMSans-Bold',
+    fontSize: 15,
+    color: theme.colors.gray900
+  },
+  matchDate: {
+    fontFamily: theme.fonts.body,
+    fontSize: 13,
+    color: theme.colors.gray400,
+    marginTop: 4
+  },
+  cardRight: {
+    alignItems: 'flex-end',
+  },
+  scoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  scoreText: {
+    fontFamily: theme.fonts.display,
+    fontSize: 24,
+    color: theme.colors.gray900,
+  },
+  pendingStatus: {
+    fontFamily: theme.fonts.display,
+    fontSize: 12,
+    color: theme.colors.gray400,
+    letterSpacing: 1,
+  },
   empty: { alignItems: 'center', marginTop: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  emptyHint: { color: '#888', marginTop: 4, textAlign: 'center', paddingHorizontal: 24 },
+  emptyText: {
+    fontFamily: theme.fonts.body,
+    fontSize: 16,
+    color: theme.colors.gray400
+  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modal: {
-    backgroundColor: '#1a1d27',
+    backgroundColor: theme.colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
   },
-  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 16 },
-  modalLabel: { color: '#888', fontSize: 12, marginBottom: 8 },
+  modalTitle: {
+    fontFamily: theme.fonts.display,
+    fontSize: 24,
+    color: theme.colors.gray900,
+    marginBottom: 20
+  },
+  modalLabel: {
+    fontFamily: theme.fonts.display,
+    fontSize: 12,
+    color: theme.colors.gray400,
+    letterSpacing: 1,
+    marginBottom: 8
+  },
   teamChip: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#0f1117',
+    backgroundColor: theme.colors.gray100,
     marginRight: 8,
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  teamChipActive: { backgroundColor: '#22c55e' },
-  teamChipText: { color: '#fff', fontWeight: '600' },
+  teamChipActive: { backgroundColor: theme.colors.primary },
+  teamChipText: {
+    fontFamily: 'DMSans-Bold',
+    color: theme.colors.gray600
+  },
+  teamChipTextActive: { color: theme.colors.white },
   input: {
-    backgroundColor: '#0f1117',
-    color: '#fff',
+    backgroundColor: theme.colors.gray100,
+    color: theme.colors.gray900,
     borderRadius: 12,
     padding: 14,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#2a2d3a',
+    marginBottom: 20,
+    fontFamily: theme.fonts.body,
   },
-  modalHint: { color: '#666', fontSize: 12, marginBottom: 16 },
   createBtn: {
-    backgroundColor: '#22c55e',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginBottom: 12,
   },
-  createBtnText: { color: '#fff', fontWeight: '700' },
-  cancel: { color: '#888', textAlign: 'center' },
+  createBtnText: {
+    color: theme.colors.white,
+    fontFamily: theme.fonts.display,
+    fontSize: 18
+  },
+  cancel: {
+    color: theme.colors.gray400,
+    textAlign: 'center',
+    fontFamily: theme.fonts.body
+  },
 });
