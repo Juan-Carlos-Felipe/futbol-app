@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { signIn } from '@/lib/auth';
+import { theme } from '@/lib/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -30,13 +31,13 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.title}>⚽ FutbolApp</Text>
+      <Text style={styles.title}>⚽ FUTBOLAPP</Text>
       <Text style={styles.subtitle}>Inicia sesión</Text>
 
       <TextInput
         style={styles.input}
         placeholder="Email"
-        placeholderTextColor="#666"
+        placeholderTextColor={theme.colors.gray400}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -45,7 +46,7 @@ export default function LoginScreen() {
       <TextInput
         style={styles.input}
         placeholder="Contraseña"
-        placeholderTextColor="#666"
+        placeholderTextColor={theme.colors.gray400}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -56,7 +57,7 @@ export default function LoginScreen() {
         onPress={handleLogin}
         disabled={loading}
       >
-        <Text style={styles.btnText}>{loading ? 'Entrando...' : 'Entrar'}</Text>
+        <Text style={styles.btnText}>{loading ? 'ENTRANDO...' : 'ENTRAR'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push('/register')}>
@@ -67,15 +68,54 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117', justifyContent: 'center', padding: 24 },
-  title: { fontSize: 36, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 4 },
-  subtitle: { fontSize: 16, color: '#888', textAlign: 'center', marginBottom: 32 },
-  input: {
-    backgroundColor: '#1a1d27', color: '#fff', borderRadius: 12,
-    padding: 16, marginBottom: 12, fontSize: 16, borderWidth: 1, borderColor: '#2a2d3a'
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.primaryDark,
+    justifyContent: 'center',
+    padding: 24
   },
-  btn: { backgroundColor: '#22c55e', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8 },
+  title: {
+    fontSize: 48,
+    fontFamily: theme.fonts.display,
+    color: theme.colors.white,
+    textAlign: 'center',
+    marginBottom: 4
+  },
+  subtitle: {
+    fontSize: 16,
+    fontFamily: theme.fonts.body,
+    color: theme.colors.white,
+    opacity: 0.7,
+    textAlign: 'center',
+    marginBottom: 32
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    color: theme.colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    fontSize: 16,
+    fontFamily: theme.fonts.body,
+  },
+  btn: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8
+  },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  link: { color: '#22c55e', textAlign: 'center', marginTop: 20, fontSize: 14 },
+  btnText: {
+    color: theme.colors.white,
+    fontFamily: theme.fonts.display,
+    fontSize: 18
+  },
+  link: {
+    color: theme.colors.primary,
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 14,
+    fontFamily: 'DMSans-Medium',
+  },
 });

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  TextInput, Modal, Alert, ActivityIndicator
+  TextInput, Modal, Alert, ActivityIndicator, Image
 } from 'react-native';
 import { useMyTeams, useCreateTeam, useJoinTeam } from '@/hooks/useTeams';
 import { useAuth } from '@/hooks/useAuth';
+import { theme } from '@/lib/theme';
 
 export default function TeamsScreen() {
   const { userId } = useAuth();
@@ -41,16 +42,15 @@ export default function TeamsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 24 }}>
-      <Text style={styles.title}>Mis Equipos</Text>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 24, paddingTop: 60 }}>
+      <Text style={styles.title}>MIS EQUIPOS</Text>
 
-      {isLoading && <ActivityIndicator color="#22c55e" style={{ marginTop: 40 }} />}
+      {isLoading && <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />}
 
       {teams?.length === 0 && !isLoading && (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>⚽</Text>
           <Text style={styles.emptyText}>Aún no tienes equipos</Text>
-          <Text style={styles.emptyHint}>Crea uno o únete con un código</Text>
         </View>
       )}
 
@@ -61,26 +61,26 @@ export default function TeamsScreen() {
         return (
           <View key={member.team_id} style={styles.teamCard}>
             <View style={styles.teamHeader}>
-              <Text style={styles.teamName}>{team.name}</Text>
-              {isCreator && <Text style={styles.badge}>Capitán</Text>}
-            </View>
-
-            <View style={styles.teamStats}>
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>{member.games_played}</Text>
-                <Text style={styles.statLabel}>Partidos</Text>
+              <View style={styles.logoPlaceholder}>
+                <Text style={styles.logoInitial}>{team.name.charAt(0)}</Text>
               </View>
-              <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: '#f59e0b' }]}> 
-                  {member.streak} 🔥
-                </Text>
-                <Text style={styles.statLabel}>Racha</Text>
+              <View style={styles.teamInfo}>
+                <Text style={styles.teamName}>{team.name}</Text>
+                <Text style={styles.teamStatsMini}>12G · 4E · 3P</Text>
+              </View>
+              <View style={styles.eloBadge}>
+                <Text style={styles.eloText}>⚡ 1.247</Text>
               </View>
             </View>
 
-            <View style={styles.codeRow}>
-              <Text style={styles.codeLabel}>Código de invitación:</Text>
-              <Text style={styles.codeValue}>{team.invite_code}</Text>
+            <View style={styles.teamActions}>
+              <TouchableOpacity style={styles.viewTeamBtn}>
+                <Text style={styles.viewTeamText}>Ver equipo</Text>
+              </TouchableOpacity>
+              <View style={styles.inviteInfo}>
+                <Text style={styles.codeLabel}>CÓDIGO:</Text>
+                <Text style={styles.codeValue}>{team.invite_code}</Text>
+              </View>
             </View>
           </View>
         );
@@ -88,32 +88,32 @@ export default function TeamsScreen() {
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.createBtn} onPress={() => setShowCreate(true)}>
-          <Text style={styles.createBtnText}>+ Crear equipo</Text>
+          <Text style={styles.createBtnText}>+ CREAR EQUIPO</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.joinBtn} onPress={() => setShowJoin(true)}>
-          <Text style={styles.joinBtnText}>Unirse con código</Text>
+          <Text style={styles.joinBtnText}>UNIRSE CON CÓDIGO</Text>
         </TouchableOpacity>
       </View>
 
       <Modal visible={showCreate} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Crear equipo</Text>
+            <Text style={styles.modalTitle}>CREAR EQUIPO</Text>
             <TextInput
               style={styles.input}
               placeholder="Nombre del equipo"
-              placeholderTextColor="#666"
+              placeholderTextColor={theme.colors.gray400}
               value={teamName}
               onChangeText={setTeamName}
               autoFocus
             />
             <TouchableOpacity
-              style={[styles.createBtn, { marginBottom: 10 }]}
+              style={styles.createBtn}
               onPress={handleCreate}
               disabled={createTeam.isPending}
             >
               <Text style={styles.createBtnText}>
-                {createTeam.isPending ? 'Creando...' : 'Crear'}
+                {createTeam.isPending ? 'CREANDO...' : 'CREAR'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowCreate(false)}>
@@ -126,23 +126,23 @@ export default function TeamsScreen() {
       <Modal visible={showJoin} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Unirse a un equipo</Text>
+            <Text style={styles.modalTitle}>UNIRSE A UN EQUIPO</Text>
             <TextInput
               style={styles.input}
               placeholder="Código de invitación"
-              placeholderTextColor="#666"
+              placeholderTextColor={theme.colors.gray400}
               value={inviteCode}
               onChangeText={setInviteCode}
               autoCapitalize="characters"
               autoFocus
             />
             <TouchableOpacity
-              style={[styles.createBtn, { marginBottom: 10 }]}
+              style={styles.createBtn}
               onPress={handleJoin}
               disabled={joinTeam.isPending}
             >
               <Text style={styles.createBtnText}>
-                {joinTeam.isPending ? 'Uniéndose...' : 'Unirse'}
+                {joinTeam.isPending ? 'UNIÉNDOSE...' : 'UNIRSE'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowJoin(false)}>
@@ -156,40 +156,158 @@ export default function TeamsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117' },
-  title: { fontSize: 24, fontWeight: '800', color: '#fff', marginBottom: 24 },
+  container: { flex: 1, backgroundColor: theme.colors.gray50 },
+  title: {
+    fontFamily: theme.fonts.display,
+    fontSize: 32,
+    color: theme.colors.gray900,
+    marginBottom: 24
+  },
   empty: { alignItems: 'center', marginTop: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  emptyHint: { color: '#888', marginTop: 4 },
+  emptyText: {
+    fontFamily: theme.fonts.body,
+    fontSize: 16,
+    color: theme.colors.gray400
+  },
   teamCard: {
-    backgroundColor: '#1a1d27', borderRadius: 16, padding: 20,
-    marginBottom: 16, borderWidth: 1, borderColor: '#2a2d3a'
+    backgroundColor: theme.colors.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    ...theme.shadow.sm,
   },
-  teamHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  teamName: { fontSize: 18, fontWeight: '700', color: '#fff' },
-  badge: {
-    backgroundColor: '#22c55e22', color: '#22c55e',
-    fontSize: 11, fontWeight: '700', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20
+  teamHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16
   },
-  teamStats: { flexDirection: 'row', marginBottom: 16, gap: 24 },
-  stat: { alignItems: 'center' },
-  statValue: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  statLabel: { fontSize: 11, color: '#888', marginTop: 2 },
-  codeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0f1117', borderRadius: 10, padding: 12 },
-  codeLabel: { color: '#888', fontSize: 12 },
-  codeValue: { color: '#22c55e', fontWeight: '800', fontSize: 16, letterSpacing: 2 },
-  actions: { gap: 12, marginTop: 8 },
-  createBtn: { backgroundColor: '#22c55e', borderRadius: 12, padding: 16, alignItems: 'center' },
-  createBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  joinBtn: { borderWidth: 1, borderColor: '#22c55e', borderRadius: 12, padding: 16, alignItems: 'center' },
-  joinBtnText: { color: '#22c55e', fontWeight: '700', fontSize: 15 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: '#1a1d27', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 28 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 20 },
+  logoPlaceholder: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoInitial: {
+    color: theme.colors.white,
+    fontFamily: theme.fonts.display,
+    fontSize: 24,
+  },
+  teamInfo: {
+    flex: 1,
+  },
+  teamName: {
+    fontFamily: 'DMSans-Bold',
+    fontSize: 16,
+    color: theme.colors.gray900
+  },
+  teamStatsMini: {
+    fontFamily: theme.fonts.body,
+    fontSize: 12,
+    color: theme.colors.gray400,
+    marginTop: 2,
+  },
+  eloBadge: {
+    backgroundColor: theme.colors.goldLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  eloText: {
+    fontFamily: 'DMSans-Bold',
+    fontSize: 12,
+    color: theme.colors.goldDark,
+  },
+  teamActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.gray100,
+    paddingTop: 12,
+  },
+  viewTeamBtn: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  viewTeamText: {
+    color: theme.colors.primary,
+    fontFamily: 'DMSans-Bold',
+    fontSize: 13,
+  },
+  inviteInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  codeLabel: {
+    fontFamily: theme.fonts.display,
+    fontSize: 11,
+    color: theme.colors.gray400,
+  },
+  codeValue: {
+    fontFamily: theme.fonts.display,
+    fontSize: 13,
+    color: theme.colors.primary,
+  },
+  actions: { gap: 12, marginTop: 16 },
+  createBtn: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center'
+  },
+  createBtnText: {
+    color: theme.colors.white,
+    fontFamily: theme.fonts.display,
+    fontSize: 16
+  },
+  joinBtn: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center'
+  },
+  joinBtnText: {
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.display,
+    fontSize: 16
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end'
+  },
+  modal: {
+    backgroundColor: theme.colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24
+  },
+  modalTitle: {
+    fontFamily: theme.fonts.display,
+    fontSize: 24,
+    color: theme.colors.gray900,
+    marginBottom: 20
+  },
   input: {
-    backgroundColor: '#0f1117', color: '#fff', borderRadius: 12,
-    padding: 14, marginBottom: 16, fontSize: 16, borderWidth: 1, borderColor: '#2a2d3a'
+    backgroundColor: theme.colors.gray100,
+    color: theme.colors.gray900,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    fontFamily: theme.fonts.body,
   },
-  cancel: { color: '#888', textAlign: 'center', fontSize: 14 },
+  cancel: {
+    color: theme.colors.gray400,
+    textAlign: 'center',
+    fontFamily: theme.fonts.body
+  },
 });

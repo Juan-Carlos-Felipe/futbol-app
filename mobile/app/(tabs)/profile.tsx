@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Image, Alert, ActivityIndicator
+  ScrollView, Image, Alert, ActivityIndicator, Dimensions
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -9,13 +9,13 @@ import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { signOut } from '@/lib/auth';
+import { theme } from '@/lib/theme';
+import { FifaCard } from '@/components/ui/FifaCard';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { ResultBadge } from '@/components/ui/ResultBadge';
 
-const SKILLS = [
-  { key: 'attack', label: 'Ataque', emoji: '⚡' },
-  { key: 'defense', label: 'Defensa', emoji: '🛡️' },
-  { key: 'speed', label: 'Velocidad', emoji: '💨' },
-  { key: 'stamina', label: 'Resistencia', emoji: '❤️' },
-] as const;
+const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { userId } = useAuth();
@@ -29,12 +29,23 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { justifyContent: 'center' }]}>
-        <ActivityIndicator color="#22c55e" />
+        <ActivityIndicator color={theme.colors.primary} />
       </View>
     );
   }
 
   const skills = profile?.skills ?? { attack: 50, defense: 50, speed: 50, stamina: 50 };
+
+  // Dummy data for FIFA stats and historical matches
+  const fifaStats = {
+    pas: skills.attack || 50,
+    vel: skills.speed || 50,
+    tir: skills.attack || 50,
+    reg: skills.speed || 50,
+    def: skills.defense || 50,
+    fis: skills.stamina || 50,
+  };
+  const rating = Math.round((fifaStats.pas + fifaStats.vel + fifaStats.tir + fifaStats.reg + fifaStats.def + fifaStats.fis) / 6);
 
   async function pickAndUploadAvatar() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -90,109 +101,234 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 24 }}>
-      <View style={styles.avatarSection}>
-        <TouchableOpacity onPress={pickAndUploadAvatar} disabled={uploadingAvatar}>
-          {profile?.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={{ fontSize: 40 }}>👤</Text>
+    <ScrollView style={styles.container} bounces={false}>
+      <View style={styles.heroSection}>
+        <View style={styles.heroContent}>
+          <TouchableOpacity onPress={pickAndUploadAvatar} disabled={uploadingAvatar} style={styles.avatarContainer}>
+            {profile?.avatar_url ? (
+              <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={{ fontSize: 40 }}>👤</Text>
+              </View>
+            )}
+            {uploadingAvatar && (
+              <View style={styles.avatarOverlay}>
+                <ActivityIndicator color="#fff" />
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.nameSection}>
+            {editing ? (
+              <View style={styles.editRow}>
+                <TextInput
+                  style={styles.input}
+                  value={displayName}
+                  onChangeText={setDisplayName}
+                  placeholder="Nombre"
+                  placeholderTextColor={theme.colors.gray400}
+                  autoFocus
+                />
+                <TouchableOpacity style={styles.saveBtn} onPress={saveProfile}>
+                  <Text style={styles.saveBtnText}>✓</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => { setDisplayName(profile?.display_name ?? ''); setEditing(true); }}>
+                <Text style={styles.name}>{profile?.display_name || 'Jugador'}</Text>
+                <Text style={styles.positionText}>DELANTERO • EQUIPO GALÁCTICOS</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.fifaCardWrapper}>
+          <FifaCard
+            name={profile?.display_name || 'Jugador'}
+            rating={rating}
+            position="DEL"
+            stats={fifaStats}
+          />
+        </View>
+      </View>
+
+      <View style={styles.content}>
+        <View style={styles.statsRow}>
+          <StatCard value={12} label="Ganados" type="win" />
+          <StatCard value={4} label="Perdidos" type="loss" />
+          <StatCard value={2} label="Empates" type="draw" />
+        </View>
+
+        <View style={[styles.statsRow, { marginTop: 12 }]}>
+          <StatCard value={18} label="Partidos" type="neutral" />
+          <StatCard value={3} label="Racha" type="gold" />
+          <StatCard value={1240} label="ELO" type="gold" />
+        </View>
+
+        <View style={styles.historySection}>
+          <SectionHeader
+            title="HISTORIAL"
+            subtitle="Tus últimos encuentros"
+            action={{ label: 'Ver todo', onPress: () => {} }}
+          />
+
+          {[1, 2, 3, 4, 5].map((i) => (
+            <View key={i} style={styles.historyRow}>
+              <View style={styles.historyLeft}>
+                <ResultBadge result={i % 3 === 0 ? 'loss' : i % 2 === 0 ? 'draw' : 'win'} size="sm" />
+                <Text style={styles.historyMatchText}>vs Los Troncos FC</Text>
+              </View>
+              <View style={styles.historyRight}>
+                <Text style={styles.historyScore}>3 - 1</Text>
+                <Text style={styles.historyDate}>12 May</Text>
+              </View>
             </View>
-          )}
-          {uploadingAvatar && (
-            <View style={styles.avatarOverlay}>
-              <ActivityIndicator color="#fff" />
-            </View>
-          )}
-          <Text style={styles.changePhoto}>Cambiar foto</Text>
+          ))}
+        </View>
+
+        <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
+          <Text style={styles.logoutText}>Cerrar sesión</Text>
         </TouchableOpacity>
       </View>
-
-      <View style={styles.section}>
-        {editing ? (
-          <View style={styles.row}>
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Nombre de jugador"
-              placeholderTextColor="#666"
-              autoFocus
-            />
-            <TouchableOpacity style={styles.saveBtn} onPress={saveProfile}>
-              <Text style={styles.saveBtnText}>✓</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            onPress={() => { setDisplayName(profile?.display_name ?? ''); setEditing(true); }}
-          >
-            <Text style={styles.name}>{profile?.display_name}</Text>
-            <Text style={styles.editHint}>Toca para editar ✏️</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.email}>{profile?.email}</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Habilidades</Text>
-        {SKILLS.map(({ key, label, emoji }) => (
-          <View key={key} style={styles.skillRow}>
-            <Text style={styles.skillLabel}>{emoji} {label}</Text>
-            <View style={styles.skillBarBg}>
-              <View style={[styles.skillBarFill, { width: `${skills[key]}%` }]} />
-            </View>
-            <Text style={styles.skillValue}>{skills[key]}</Text>
-          </View>
-        ))}
-        <Text style={styles.skillNote}>
-          * Las habilidades suben con la actividad en partidos
-        </Text>
-      </View>
-
-      <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
-        <Text style={styles.logoutText}>Cerrar sesión</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117' },
-  avatarSection: { alignItems: 'center', marginBottom: 24 },
-  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: '#22c55e' },
+  container: { flex: 1, backgroundColor: theme.colors.white },
+  heroSection: {
+    backgroundColor: theme.colors.primaryDark,
+    height: 300,
+    paddingTop: 60,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    overflow: 'visible',
+    zIndex: 10,
+  },
+  heroContent: {
+    flex: 1,
+  },
+  avatarContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 3,
+    borderColor: theme.colors.gold,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  avatar: { width: '100%', height: '100%' },
   avatarPlaceholder: {
-    width: 100, height: 100, borderRadius: 50,
-    backgroundColor: '#1a1d27', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: '#2a2d3a'
+    width: '100%',
+    height: '100%',
+    backgroundColor: theme.colors.primaryMid,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 50,
-    alignItems: 'center', justifyContent: 'center'
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  changePhoto: { color: '#22c55e', marginTop: 8, fontSize: 13 },
-  section: { marginBottom: 28 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  editHint: { color: '#666', fontSize: 12, marginTop: 2 },
-  email: { color: '#888', fontSize: 14, marginTop: 4 },
+  nameSection: {
+    marginTop: 8,
+  },
+  name: {
+    fontFamily: theme.fonts.display,
+    fontSize: 36,
+    color: theme.colors.white,
+  },
+  positionText: {
+    fontFamily: theme.fonts.body,
+    fontSize: 14,
+    color: theme.colors.white,
+    opacity: 0.7,
+  },
+  editRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   input: {
-    backgroundColor: '#1a1d27', color: '#fff', borderRadius: 10,
-    padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#2a2d3a'
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 8,
+    color: theme.colors.white,
+    flex: 1,
+    fontFamily: theme.fonts.body,
   },
   saveBtn: {
-    backgroundColor: '#22c55e', borderRadius: 10, padding: 12, alignItems: 'center', minWidth: 44
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
   },
-  saveBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  sectionTitle: { color: '#888', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', marginBottom: 16 },
-  skillRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
-  skillLabel: { color: '#fff', fontSize: 14, width: 110 },
-  skillBarBg: { flex: 1, height: 6, backgroundColor: '#1a1d27', borderRadius: 3, overflow: 'hidden' },
-  skillBarFill: { height: '100%', backgroundColor: '#22c55e', borderRadius: 3 },
-  skillValue: { color: '#888', fontSize: 12, width: 30, textAlign: 'right' },
-  skillNote: { color: '#444', fontSize: 11, marginTop: 8, fontStyle: 'italic' },
-  logoutBtn: { borderWidth: 1, borderColor: '#ef4444', borderRadius: 12, padding: 14, alignItems: 'center' },
-  logoutText: { color: '#ef4444', fontWeight: '600' },
+  saveBtnText: { color: theme.colors.white, fontWeight: '700' },
+  fifaCardWrapper: {
+    position: 'absolute',
+    right: -20,
+    top: 40,
+    transform: [{ scale: 0.85 }],
+  },
+  content: {
+    padding: 24,
+    paddingTop: 32,
+    backgroundColor: theme.colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  historySection: {
+    marginTop: 32,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.gray100,
+  },
+  historyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  historyMatchText: {
+    fontFamily: 'DMSans-Bold',
+    fontSize: 15,
+    color: theme.colors.gray900,
+  },
+  historyRight: {
+    alignItems: 'flex-end',
+  },
+  historyScore: {
+    fontFamily: theme.fonts.display,
+    fontSize: 18,
+    color: theme.colors.gray900,
+  },
+  historyDate: {
+    fontFamily: theme.fonts.body,
+    fontSize: 12,
+    color: theme.colors.gray400,
+  },
+  logoutBtn: {
+    marginTop: 40,
+    borderWidth: 1,
+    borderColor: theme.colors.loss,
+    borderRadius: theme.radius.md,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoutText: {
+    color: theme.colors.loss,
+    fontFamily: 'DMSans-Bold',
+  },
 });

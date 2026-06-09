@@ -3,17 +3,35 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { useFonts, BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
+import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
+import * as SplashScreen from 'expo-splash-screen';
+
+SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
-  const { session, loading } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
 
+  const [fontsLoaded] = useFonts({
+    BebasNeue: BebasNeue_400Regular,
+    DMSans: DMSans_400Regular,
+    'DMSans-Medium': DMSans_500Medium,
+    'DMSans-Bold': DMSans_700Bold,
+  });
+
   useEffect(() => {
-    if (loading || !navigationState?.key) return;
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  useEffect(() => {
+    if (authLoading || !fontsLoaded || !navigationState?.key) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
@@ -22,7 +40,9 @@ function RootLayoutNav() {
     } else if (session && inAuthGroup) {
       router.replace('/feed');
     }
-  }, [session, loading, segments, navigationState?.key]);
+  }, [session, authLoading, fontsLoaded, segments, navigationState?.key]);
+
+  if (!fontsLoaded) return null;
 
   return (
     <>
@@ -32,7 +52,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="match" options={{ headerShown: false }} />
       </Stack>
-      {loading && (
+      {authLoading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#22c55e" />
         </View>

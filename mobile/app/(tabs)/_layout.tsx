@@ -1,16 +1,24 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { theme } from '@/lib/theme';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarStyle: { backgroundColor: '#0f1117', borderTopColor: '#1a1d27' },
-        tabBarActiveTintColor: '#22c55e',
-        tabBarInactiveTintColor: '#888',
-        headerStyle: { backgroundColor: '#0f1117' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '700' },
+        tabBarStyle: {
+          backgroundColor: theme.colors.white,
+          borderTopColor: theme.colors.gray100,
+          height: 60,
+          paddingBottom: 8,
+        },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.gray400,
+        tabBarLabelStyle: {
+          fontFamily: 'DMSans-Medium',
+          fontSize: 11,
+        },
+        headerShown: false,
       }}
     >
       <Tabs.Screen
@@ -42,5 +50,5 @@ export default function TabLayout() {
 }
 
 function TabIcon({ emoji, color }: { emoji: string; color: string }) {
-  return <Text style={{ fontSize: 20, opacity: color === '#22c55e' ? 1 : 0.5 }}>{emoji}</Text>;
+  return <Text style={{ fontSize: 20, opacity: color === theme.colors.primary ? 1 : 0.5 }}>{emoji}</Text>;
 }
