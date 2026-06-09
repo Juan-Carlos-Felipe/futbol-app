@@ -1,0 +1,96 @@
+import { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { signUp } from '@/lib/auth';
+
+export default function RegisterScreen() {
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  async function handleRegister() {
+    if (!displayName || !email || !password)
+      return Alert.alert('Completa todos los campos');
+    if (password.length < 6)
+      return Alert.alert('La contraseña debe tener al menos 6 caracteres');
+
+    setLoading(true);
+    try {
+      await signUp(email, password, displayName);
+      Alert.alert('¡Listo!', 'Cuenta creada. Revisa tu email para confirmar.');
+      router.replace('/login');
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>⚽ FutbolApp</Text>
+        <Text style={styles.subtitle}>Crea tu cuenta</Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Nombre de jugador"
+          placeholderTextColor="#666"
+          value={displayName}
+          onChangeText={setDisplayName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor="#666"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Contraseña (mín. 6 caracteres)"
+          placeholderTextColor="#666"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        <TouchableOpacity
+          style={[styles.btn, loading && styles.btnDisabled]}
+          onPress={handleRegister}
+          disabled={loading}
+        >
+          <Text style={styles.btnText}>{loading ? 'Creando...' : 'Crear cuenta'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.link}>¿Ya tienes cuenta? Inicia sesión</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flexGrow: 1, backgroundColor: '#0f1117', justifyContent: 'center', padding: 24 },
+  title: { fontSize: 36, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 4 },
+  subtitle: { fontSize: 16, color: '#888', textAlign: 'center', marginBottom: 32 },
+  input: {
+    backgroundColor: '#1a1d27', color: '#fff', borderRadius: 12,
+    padding: 16, marginBottom: 12, fontSize: 16, borderWidth: 1, borderColor: '#2a2d3a'
+  },
+  btn: { backgroundColor: '#22c55e', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8 },
+  btnDisabled: { opacity: 0.6 },
+  btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  link: { color: '#22c55e', textAlign: 'center', marginTop: 20, fontSize: 14 },
+});

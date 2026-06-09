@@ -1,0 +1,34 @@
+node_modules/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+.expo-web-test/
+expo-env.d.ts
+web-build/
+dist/
+build/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/
+.git-local-backup/
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
