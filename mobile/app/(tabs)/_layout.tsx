@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   return (
@@ -31,6 +32,16 @@ export default function TabLayout() {
           title: 'Canchas',
           tabBarLabel: 'Canchas',
           tabBarIcon: ({ color }) => <TabIcon emoji="🏟️" color={color} />
+        }}
+      />
+      <Tabs.Screen
+        name="matchmaking"
+        options={{
+          title: 'Rivales',
+          tabBarLabel: 'Rivales',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="shield-half-outline" size={20} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
