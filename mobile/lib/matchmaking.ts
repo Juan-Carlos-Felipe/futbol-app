@@ -74,6 +74,13 @@ export interface MatchResult {
   goals_away: number;
   confirmed_by: string;
   confirmed_at: string;
+  created_at?: string;
+}
+
+export interface TeamMatchHistoryItem extends MatchResult {
+  created_at: string;
+  home_name: string;
+  away_name: string;
 }
 
 export interface TeamPublicProfile {
@@ -96,6 +103,18 @@ export interface TeamWithProfile {
   stats: TeamStats | null;
   profile: TeamPublicProfile | null;
   members_count: number;
+}
+
+export interface TeamMemberProfile {
+  id: string;
+  user_id: string;
+  team_id: string;
+  role: string | null;
+  display_name: string;
+  avatar_url: string | null;
+  matches_played: number;
+  wins: number;
+  elo: number;
 }
 
 export interface MatchRequestFilters {
@@ -139,12 +158,30 @@ type MatchRequestRow = Omit<MatchRequest, 'teams' | 'team_stats'> & {
   teams: { name: string } | null;
 };
 
+type MatchRequestDetailRow = Omit<MatchRequest, 'teams' | 'team_stats'> & {
+  teams: { name: string } | null;
+};
+
 type MatchRequestResponseRow = Omit<MatchRequestResponse, 'teams'> & {
   teams: { name: string } | null;
 };
 
 type RankingRow = TeamStats & {
   teams: { name: string } | null;
+};
+
+type TeamMemberRow = {
+  id: string;
+  user_id: string;
+  team_id: string;
+  role?: string | null;
+  users: { display_name: string; avatar_url: string | null } | null;
+};
+
+type MatchHistoryRow = MatchResult & {
+  created_at: string;
+  home_team: { name: string } | null;
+  away_team: { name: string } | null;
 };
 
 function throwSupabaseError(context: string, error: unknown): never {
@@ -260,6 +297,53 @@ export async function getMyTeamRequests(teamId: string): Promise<MatchRequest[]>
   return data ?? [];
 }
 
+export async function getMatchRequestById(requestId: string): Promise<MatchRequest | null> {
+  const { data, error } = await supabase
+    .from('match_requests')
+    .select(
+      `
+        *,
+        teams (
+          name
+        )
+      `
+    )
+    .eq('id', requestId)
+    .limit(1)
+    .returns<MatchRequestDetailRow[]>();
+
+  if (error) {
+    throwSupabaseError('Error fetching match request detail', error);
+  }
+
+  const request = data?.[0];
+
+  if (!request) {
+    return null;
+  }
+
+  const { data: statsRows, error: statsError } = await supabase
+    .from('team_stats')
+    .select('*')
+    .eq('team_id', request.team_id)
+    .limit(1)
+    .returns<TeamStats[]>();
+
+  if (statsError) {
+    throwSupabaseError('Error fetching team stats for match request detail', statsError);
+  }
+
+  return {
+    ...request,
+    teams: request.teams
+      ? {
+        name: request.teams.name,
+      }
+      : undefined,
+    team_stats: statsRows?.[0] ?? undefined,
+  };
+}
+
 export async function getRequestResponses(
   requestId: string
 ): Promise<MatchRequestResponse[]> {
@@ -351,6 +435,46 @@ export async function respondToRequest(
     throw upsertError;
   }
 
+  const { data: requestRows, error: requestError } = await supabase
+    .from('match_requests')
+    .select('created_by')
+    .eq('id', data.requestId)
+    .limit(1)
+    .returns<Array<{ created_by: string }>>();
+
+  if (requestError) {
+    console.warn('[matchmaking] Error fetching request owner for notification', requestError);
+  }
+
+  const { data: teamRows, error: teamError } = await supabase
+    .from('teams')
+    .select('name')
+    .eq('id', data.teamId)
+    .limit(1)
+    .returns<Array<{ name: string }>>();
+
+  if (teamError) {
+    console.warn('[matchmaking] Error fetching proposing team name', teamError);
+  }
+
+  const targetUserId = requestRows?.[0]?.created_by;
+  const fromTeamName = teamRows?.[0]?.name ?? 'Un equipo';
+
+  if (targetUserId) {
+    const { error: notifyError } = await supabase.functions.invoke('notify-reservation', {
+      body: {
+        type: 'MATCH_PROPOSAL',
+        targetUserId,
+        fromTeamName,
+        requestId: data.requestId,
+      },
+    });
+
+    if (notifyError) {
+      console.warn('[matchmaking] Error sending match proposal notification', notifyError);
+    }
+  }
+
   return responses[0];
 }
 
@@ -381,6 +505,17 @@ export async function acceptResponse(responseId: string, requestId: string): Pro
 
   if (requestError) {
     throwSupabaseError('Error marking match request as matched', requestError);
+  }
+}
+
+export async function rejectResponse(responseId: string): Promise<void> {
+  const { error } = await supabase
+    .from('match_request_responses')
+    .update({ status: 'rejected' })
+    .eq('id', responseId);
+
+  if (error) {
+    throwSupabaseError('Error rejecting match request response', error);
   }
 }
 
@@ -469,6 +604,55 @@ export async function getTeamPublicProfile(teamId: string): Promise<TeamWithProf
   };
 }
 
+export async function getEditableTeamPublicProfile(
+  teamId: string
+): Promise<TeamWithProfile | null> {
+  const { data: teams, error: teamError } = await supabase
+    .from('teams')
+    .select('id, name')
+    .eq('id', teamId)
+    .limit(1)
+    .returns<Array<{ id: string; name: string }>>();
+
+  if (teamError) {
+    throwSupabaseError('Error fetching editable profile team', teamError);
+  }
+
+  const team = teams?.[0];
+  if (!team) {
+    return null;
+  }
+
+  const { data: profiles, error: profileError } = await supabase
+    .from('team_public_profiles')
+    .select('*')
+    .eq('team_id', teamId)
+    .limit(1)
+    .returns<TeamPublicProfile[]>();
+
+  if (profileError) {
+    throwSupabaseError('Error fetching editable team public profile', profileError);
+  }
+
+  const stats = await getTeamStats(teamId);
+  const { count, error: membersError } = await supabase
+    .from('team_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('team_id', teamId);
+
+  if (membersError) {
+    throwSupabaseError('Error counting editable team members', membersError);
+  }
+
+  return {
+    id: team.id,
+    name: team.name,
+    stats,
+    profile: profiles?.[0] ?? null,
+    members_count: count ?? 0,
+  };
+}
+
 export async function getRanking(
   limit: number = 20
 ): Promise<Array<TeamStats & { name: string }>> {
@@ -491,9 +675,180 @@ export async function getRanking(
     throwSupabaseError('Error fetching team ranking', error);
   }
 
-  return (data ?? []).map(({ teams, ...stats }) => ({
-    ...stats,
-    name: teams?.name ?? 'Equipo',
+  const rows = data ?? [];
+  const teamIds = rows.map((row) => row.team_id);
+
+  if (teamIds.length === 0) {
+    return [];
+  }
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from('team_public_profiles')
+    .select('team_id')
+    .eq('is_public', true)
+    .in('team_id', teamIds)
+    .returns<Array<{ team_id: string }>>();
+
+  if (profilesError) {
+    throwSupabaseError('Error filtering public ranking teams', profilesError);
+  }
+
+  const publicTeamIds = new Set((profiles ?? []).map((profile) => profile.team_id));
+
+  return rows
+    .filter((row) => publicTeamIds.has(row.team_id))
+    .map(({ teams, ...stats }) => ({
+      ...stats,
+      name: teams?.name ?? 'Equipo',
+    }));
+}
+
+export const getTeamRecentForm = async (teamId: string) => {
+  const { data, error } = await supabase
+    .from('match_results')
+    .select('team_home_id, team_away_id, goals_home, goals_away')
+    .or(`team_home_id.eq.${teamId},team_away_id.eq.${teamId}`)
+    .order('confirmed_at', { ascending: false })
+    .limit(5)
+    .returns<
+      Array<{
+        team_home_id: string;
+        team_away_id: string;
+        goals_home: number;
+        goals_away: number;
+      }>
+    >();
+
+  if (error) throw error;
+
+  return (data ?? []).map((result) => {
+    const isHome = result.team_home_id === teamId;
+    const myGoals = isHome ? result.goals_home : result.goals_away;
+    const theirGoals = isHome ? result.goals_away : result.goals_home;
+    if (myGoals > theirGoals) return 'win' as const;
+    if (myGoals < theirGoals) return 'loss' as const;
+    return 'draw' as const;
+  });
+};
+
+export async function getTeamMembers(teamId: string): Promise<TeamMemberProfile[]> {
+  const { data: members, error } = await supabase
+    .from('team_members')
+    .select(
+      `
+        id,
+        user_id,
+        team_id,
+        role,
+        users (
+          display_name,
+          avatar_url
+        )
+      `
+    )
+    .eq('team_id', teamId)
+    .returns<TeamMemberRow[]>();
+
+  if (error) {
+    const { data: fallbackMembers, error: fallbackError } = await supabase
+      .from('team_members')
+      .select(
+        `
+          id,
+          user_id,
+          team_id,
+          users (
+            display_name,
+            avatar_url
+          )
+        `
+      )
+      .eq('team_id', teamId)
+      .returns<TeamMemberRow[]>();
+
+    if (fallbackError) {
+      throwSupabaseError('Error fetching team members', fallbackError);
+    }
+
+    return hydrateTeamMembers(fallbackMembers ?? []);
+  }
+
+  return hydrateTeamMembers(members ?? []);
+}
+
+async function hydrateTeamMembers(members: TeamMemberRow[]): Promise<TeamMemberProfile[]> {
+  const userIds = members.map((member) => member.user_id);
+
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const { data: stats, error: statsError } = await supabase
+    .from('player_stats')
+    .select('user_id, matches_played, wins, elo')
+    .in('user_id', userIds)
+    .returns<
+      Array<{
+        user_id: string;
+        matches_played: number;
+        wins: number;
+        elo: number;
+      }>
+    >();
+
+  if (statsError) {
+    throwSupabaseError('Error fetching team member stats', statsError);
+  }
+
+  const statsByUserId = new Map((stats ?? []).map((stat) => [stat.user_id, stat]));
+
+  return members
+    .map((member) => {
+      const playerStats = statsByUserId.get(member.user_id);
+      return {
+        id: member.id,
+        user_id: member.user_id,
+        team_id: member.team_id,
+        role: member.role ?? null,
+        display_name: member.users?.display_name ?? 'Jugador',
+        avatar_url: member.users?.avatar_url ?? null,
+        matches_played: playerStats?.matches_played ?? 0,
+        wins: playerStats?.wins ?? 0,
+        elo: playerStats?.elo ?? 0,
+      };
+    })
+    .sort((a, b) => Number(b.role === 'captain') - Number(a.role === 'captain'));
+}
+
+export async function getTeamMatchHistory(
+  teamId: string
+): Promise<TeamMatchHistoryItem[]> {
+  const { data, error } = await supabase
+    .from('match_results')
+    .select(
+      `
+        *,
+        home_team:teams!match_results_team_home_id_fkey (
+          name
+        ),
+        away_team:teams!match_results_team_away_id_fkey (
+          name
+        )
+      `
+    )
+    .or(`team_home_id.eq.${teamId},team_away_id.eq.${teamId}`)
+    .order('confirmed_at', { ascending: false })
+    .limit(5)
+    .returns<MatchHistoryRow[]>();
+
+  if (error) {
+    throwSupabaseError('Error fetching team match history', error);
+  }
+
+  return (data ?? []).map(({ home_team, away_team, ...result }) => ({
+    ...result,
+    home_name: home_team?.name ?? 'Local',
+    away_name: away_team?.name ?? 'Visita',
   }));
 }
 
@@ -522,8 +877,34 @@ export async function submitMatchResult(data: SubmitMatchResultData): Promise<Ma
     throw insertError;
   }
 
+  const { error: matchError } = await supabase
+    .from('matches')
+    .update({ status: 'played' })
+    .eq('id', data.matchId);
+
+  if (matchError) {
+    throwSupabaseError('Error marking match as played after result', matchError);
+  }
+
   return results[0];
 }
+
+export const updatePlayerGoals = async (
+  scorers: { userId: string; goals: number }[]
+) => {
+  for (const scorer of scorers) {
+    if (scorer.goals <= 0) continue;
+
+    const { error } = await supabase.rpc('increment_player_goals', {
+      p_user_id: scorer.userId,
+      p_goals: scorer.goals,
+    });
+
+    if (error) {
+      throwSupabaseError('Error updating player goals', error);
+    }
+  }
+};
 
 export async function upsertTeamPublicProfile(
   teamId: string,

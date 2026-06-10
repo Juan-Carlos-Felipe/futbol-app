@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { type Href, useRouter } from 'expo-router';
 import {
   Alert,
   FlatList,
@@ -30,7 +31,7 @@ const FILTER_CHIPS: FilterChip[] = [
   { label: 'Competitivo', filters: { level: 'competitivo' } },
   { label: 'F5', filters: { size: 'F5' } },
   { label: 'F7', filters: { size: 'F7' } },
-  { label: 'Pasto sintético', filters: { surface: 'pasto sintético' } },
+  { label: 'Pasto sintetico', filters: { surface: 'Pasto sintetico' } },
 ];
 
 const STATUS_META: Record<
@@ -38,7 +39,7 @@ const STATUS_META: Record<
   { label: string; backgroundColor: string; color: string }
 > = {
   open: { label: 'Abierto', backgroundColor: '#dbeafe', color: '#2563eb' },
-  matched: { label: '¡Partido acordado!', backgroundColor: '#dcfce7', color: '#16a34a' },
+  matched: { label: 'Partido acordado', backgroundColor: '#dcfce7', color: '#16a34a' },
   cancelled: { label: 'Cancelado', backgroundColor: '#fee2e2', color: '#dc2626' },
   expired: { label: 'Expirado', backgroundColor: '#f3f4f6', color: '#6b7280' },
 };
@@ -52,6 +53,7 @@ function isSameFilter(current: MatchRequestFilters, next: MatchRequestFilters) {
 }
 
 export default function MatchmakingScreen() {
+  const router = useRouter();
   const [mode, setMode] = useState<BoardMode>('search');
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<MatchRequestFilters>({});
@@ -93,18 +95,11 @@ export default function MatchmakingScreen() {
 
   function openCreateModal() {
     if (!activeTeamId) {
-      Alert.alert('Sin equipo activo', 'Únete o crea un equipo para publicar anuncios.');
+      Alert.alert('Sin equipo activo', 'Unete o crea un equipo para publicar anuncios.');
       return;
     }
 
     setShowCreateModal(true);
-  }
-
-  function handlePropose(request: MatchRequest) {
-    Alert.alert(
-      'Proponer partido',
-      `Pronto podrás enviar una propuesta a ${request.teams?.name ?? 'este equipo'}.`
-    );
   }
 
   function renderSearchContent() {
@@ -150,9 +145,7 @@ export default function MatchmakingScreen() {
       <FlatList
         data={visibleRequests}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <MatchRequestCard request={item} onPress={() => handlePropose(item)} />
-        )}
+        renderItem={({ item }) => <MatchRequestCard request={item} />}
         contentContainerStyle={styles.listContent}
       />
     );
@@ -181,10 +174,10 @@ export default function MatchmakingScreen() {
           <TouchableOpacity
             style={styles.responsesButton}
             onPress={() =>
-              Alert.alert('Respuestas', 'Pronto podrás revisar las propuestas recibidas.')
+              Alert.alert('Respuestas', 'Abre el detalle del anuncio para revisar propuestas.')
             }
           >
-            <Text style={styles.responsesButtonText}>Ver respuestas →</Text>
+            <Text style={styles.responsesButtonText}>Ver respuestas -&gt;</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -207,7 +200,7 @@ export default function MatchmakingScreen() {
       return (
         <View style={styles.centered}>
           <Ionicons name="megaphone-outline" size={52} color="#9ca3af" />
-          <Text style={styles.emptyTitle}>Todavía no tienes anuncios</Text>
+          <Text style={styles.emptyTitle}>Todavia no tienes anuncios</Text>
           <TouchableOpacity style={styles.primaryButton} onPress={openCreateModal}>
             <Text style={styles.primaryButtonText}>Crear nuevo anuncio</Text>
           </TouchableOpacity>
@@ -230,8 +223,8 @@ export default function MatchmakingScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>TABLÓN DE RIVALES</Text>
-            <Text style={styles.headerSubtitle}>Encontrá equipos para jugar</Text>
+            <Text style={styles.headerTitle}>TABLON DE RIVALES</Text>
+            <Text style={styles.headerSubtitle}>Encontra equipos para jugar</Text>
           </View>
           <View style={styles.modeToggle}>
             <TouchableOpacity
@@ -251,6 +244,12 @@ export default function MatchmakingScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            style={styles.rankingButton}
+            onPress={() => router.push('/ranking' as Href)}
+          >
+            <Ionicons name="trophy-outline" size={22} color="#ffffff" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -260,7 +259,7 @@ export default function MatchmakingScreen() {
             <Ionicons name="search-outline" size={18} color="#6b7280" />
             <TextInput
               style={styles.searchInput}
-              placeholder="Buscar por nivel, zona o tamaño..."
+              placeholder="Buscar por nivel, zona o tamano..."
               placeholderTextColor="#9ca3af"
               value={query}
               onChangeText={setQuery}
@@ -353,6 +352,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     flexDirection: 'row',
     padding: 4,
+  },
+  rankingButton: {
+    alignItems: 'center',
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
   },
   modeButton: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7 },
   modeButtonActive: { backgroundColor: '#ffffff' },

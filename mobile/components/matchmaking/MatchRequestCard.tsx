@@ -1,12 +1,13 @@
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { MatchRequest } from '@/lib/matchmaking';
 
 type MatchRequestCardProps = {
   request: MatchRequest;
-  onPress: () => void;
+  onPress?: () => void;
 };
 
 type RequestDetail = {
@@ -35,6 +36,7 @@ export function MatchRequestCard({ request, onPress }: MatchRequestCardProps) {
   const teamName = request.teams?.name ?? 'Equipo';
   const levelMeta = LEVEL_META[request.level];
   const stats = request.team_stats;
+  const handlePress = onPress ?? (() => router.push(`/rival/${request.id}` as never));
   const details: RequestDetail[] = [];
 
   if (request.preferred_date) {
@@ -60,7 +62,7 @@ export function MatchRequestCard({ request, onPress }: MatchRequestCardProps) {
   }
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
+    <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.9}>
       <View style={[styles.levelBand, { backgroundColor: levelMeta.color }]} />
       <View style={styles.content}>
         <View style={styles.topRow}>
@@ -104,7 +106,7 @@ export function MatchRequestCard({ request, onPress }: MatchRequestCardProps) {
           ) : (
             <Text style={styles.statsText}>Sin estadísticas todavía</Text>
           )}
-          <TouchableOpacity style={styles.proposeButton} onPress={onPress}>
+          <TouchableOpacity style={styles.proposeButton} onPress={handlePress}>
             <Text style={styles.proposeText}>Proponer partido →</Text>
           </TouchableOpacity>
         </View>

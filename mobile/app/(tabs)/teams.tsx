@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { type Href, useRouter } from 'expo-router';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   TextInput, Modal, Alert, ActivityIndicator
@@ -7,6 +8,7 @@ import { useMyTeams, useCreateTeam, useJoinTeam } from '@/hooks/useTeams';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function TeamsScreen() {
+  const router = useRouter();
   const { userId } = useAuth();
   const { data: teams, isLoading } = useMyTeams();
   const createTeam = useCreateTeam();
@@ -82,6 +84,13 @@ export default function TeamsScreen() {
               <Text style={styles.codeLabel}>Código de invitación:</Text>
               <Text style={styles.codeValue}>{team.invite_code}</Text>
             </View>
+
+            <TouchableOpacity
+              style={styles.rankingBtn}
+              onPress={() => router.push('/ranking' as Href)}
+            >
+              <Text style={styles.rankingBtnText}>Ver ranking -&gt;</Text>
+            </TouchableOpacity>
           </View>
         );
       })}
@@ -179,6 +188,16 @@ const styles = StyleSheet.create({
   codeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0f1117', borderRadius: 10, padding: 12 },
   codeLabel: { color: '#888', fontSize: 12 },
   codeValue: { color: '#22c55e', fontWeight: '800', fontSize: 16, letterSpacing: 2 },
+  rankingBtn: {
+    alignSelf: 'flex-start',
+    borderColor: '#22c55e',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  rankingBtnText: { color: '#22c55e', fontSize: 12, fontWeight: '800' },
   actions: { gap: 12, marginTop: 8 },
   createBtn: { backgroundColor: '#22c55e', borderRadius: 12, padding: 16, alignItems: 'center' },
   createBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },

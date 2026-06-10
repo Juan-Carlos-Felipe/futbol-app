@@ -31,6 +31,10 @@ function RootLayoutNav() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="match" options={{ headerShown: false }} />
+        <Stack.Screen name="rival" options={{ headerShown: false }} />
+        <Stack.Screen name="ranking" options={{ headerShown: false }} />
+        <Stack.Screen name="equipo" options={{ headerShown: false }} />
+        <Stack.Screen name="partido" options={{ headerShown: false }} />
       </Stack>
       {loading && (
         <View style={styles.loadingOverlay}>

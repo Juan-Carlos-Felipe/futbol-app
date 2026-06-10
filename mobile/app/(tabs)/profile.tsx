@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Image, Alert, ActivityIndicator
 } from 'react-native';
+import type { DimensionValue } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
+import { useMyTeams } from '@/hooks/useTeams';
+import { usePlayerStats, useRanking, useTeamRecentForm } from '@/hooks/useMatchmaking';
+import { useTeamStats } from '@/hooks/useTeamStats';
 import { supabase } from '@/lib/supabase';
 import { signOut } from '@/lib/auth';
 
@@ -20,11 +24,24 @@ const SKILLS = [
 export default function ProfileScreen() {
   const { userId } = useAuth();
   const { data: profile, isLoading } = useProfile();
+  const { data: teams } = useMyTeams();
   const updateProfile = useUpdateProfile();
+  const activeTeamId = useMemo(() => teams?.[0]?.team_id ?? null, [teams]);
+  const { stats: playerStats } = usePlayerStats(userId);
+  const { stats: teamStats, winRate: teamWinRate } = useTeamStats(activeTeamId);
+  const { ranking } = useRanking(50);
+  const { form } = useTeamRecentForm(activeTeamId);
 
   const [displayName, setDisplayName] = useState('');
   const [editing, setEditing] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const playerWinRate =
+    playerStats && playerStats.matches_played > 0
+      ? Math.round((playerStats.wins / playerStats.matches_played) * 100)
+      : 0;
+  const teamRankingPosition = activeTeamId
+    ? ranking.findIndex((team) => team.team_id === activeTeamId) + 1
+    : 0;
 
   if (isLoading) {
     return (
@@ -135,6 +152,57 @@ export default function ProfileScreen() {
         <Text style={styles.email}>{profile?.email}</Text>
       </View>
 
+      <View style={styles.statsCard}>
+        <Text style={styles.statsEyebrow}>MIS STATS</Text>
+        <View style={styles.statsGrid}>
+          <StatTile label="Partidos" value={playerStats?.matches_played ?? 0} color="#d1d5db" />
+          <StatTile label="Victorias" value={playerStats?.wins ?? 0} color="#22c55e" />
+          <StatTile label="Derrotas" value={playerStats?.losses ?? 0} color="#ef4444" />
+          <StatTile label="Empates" value={playerStats?.draws ?? 0} color="#f59e0b" />
+          <StatTile label="Goles" value={playerStats?.goals ?? 0} color="#fbbf24" />
+          <StatTile label="Asistencias" value={playerStats?.assists ?? 0} color="#60a5fa" />
+        </View>
+
+        <ProgressRow label="% victorias como jugador" value={playerWinRate} />
+
+        <Text style={styles.playerElo}>
+          ⚡ ELO: {(playerStats?.elo ?? 0).toLocaleString('es-CL')}
+        </Text>
+        <Text style={styles.eloHint}>Ranking personal basado en tus resultados</Text>
+        {(playerStats?.win_streak ?? 0) > 0 ? (
+          <Text style={styles.streakText}>
+            🔥 Racha de {playerStats?.win_streak.toLocaleString('es-CL')} victorias
+          </Text>
+        ) : null}
+      </View>
+
+      <View style={styles.teamStatsCard}>
+        <View style={styles.teamStatsHeader}>
+          <Text style={styles.sectionTitle}>Mi equipo</Text>
+          {teamRankingPosition > 0 ? (
+            <Text style={styles.rankBadge}>#{teamRankingPosition.toLocaleString('es-CL')}</Text>
+          ) : null}
+        </View>
+        <View style={styles.teamStatsRow}>
+          <StatTile label="Ganados" value={teamStats?.wins ?? 0} color="#22c55e" />
+          <StatTile label="Perdidos" value={teamStats?.losses ?? 0} color="#ef4444" />
+          <StatTile label="Empates" value={teamStats?.draws ?? 0} color="#f59e0b" />
+        </View>
+        <ProgressRow label="Win rate del equipo" value={teamWinRate} />
+      </View>
+
+      <View style={styles.teamStatsCard}>
+        <Text style={styles.sectionTitle}>Forma reciente</Text>
+        <View style={styles.formDots}>
+          {form.length > 0 ? (
+            form.map((result, index) => <FormDot key={`${result}-${index}`} result={result} />)
+          ) : (
+            <Text style={styles.eloHint}>Sin partidos registrados aun</Text>
+          )}
+        </View>
+        <Text style={styles.formHint}>Ultimos 5 partidos</Text>
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Habilidades</Text>
         {SKILLS.map(({ key, label, emoji }) => (
@@ -155,6 +223,45 @@ export default function ProfileScreen() {
         <Text style={styles.logoutText}>Cerrar sesión</Text>
       </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+function StatTile({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <View style={styles.statTile}>
+      <Text style={[styles.statTileValue, { color }]}>{value.toLocaleString('es-CL')}</Text>
+      <Text style={styles.statTileLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function ProgressRow({ label, value }: { label: string; value: number }) {
+  const width = `${Math.max(0, Math.min(100, value))}%` as DimensionValue;
+
+  return (
+    <View style={styles.progressWrap}>
+      <View style={styles.progressLabelRow}>
+        <Text style={styles.progressLabel}>{label}</Text>
+        <Text style={styles.progressValue}>{value.toLocaleString('es-CL')}%</Text>
+      </View>
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width }]} />
+      </View>
+    </View>
+  );
+}
+
+function FormDot({ result }: { result: 'win' | 'draw' | 'loss' }) {
+  const meta = {
+    win: { label: 'G', backgroundColor: '#dcfce7', color: '#16a34a' },
+    draw: { label: 'E', backgroundColor: '#fef3c7', color: '#d97706' },
+    loss: { label: 'P', backgroundColor: '#fee2e2', color: '#dc2626' },
+  }[result];
+
+  return (
+    <View style={[styles.formDot, { backgroundColor: meta.backgroundColor }]}>
+      <Text style={[styles.formDotText, { color: meta.color }]}>{meta.label}</Text>
+    </View>
   );
 }
 
@@ -187,6 +294,67 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
   sectionTitle: { color: '#888', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', marginBottom: 16 },
+  statsCard: {
+    backgroundColor: '#0a3d1f',
+    borderRadius: 16,
+    marginBottom: 28,
+    padding: 18,
+  },
+  statsEyebrow: {
+    color: '#f59e0b',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  statTile: { alignItems: 'center', paddingVertical: 10, width: '33.333%' },
+  statTileValue: { fontSize: 28, fontWeight: '900' },
+  statTileLabel: { color: '#9ca3af', fontSize: 11, fontWeight: '800', marginTop: 3 },
+  progressWrap: { marginTop: 14 },
+  progressLabelRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  progressLabel: { color: '#d1d5db', fontSize: 12, fontWeight: '700' },
+  progressValue: { color: '#22c55e', fontSize: 12, fontWeight: '900' },
+  progressTrack: {
+    backgroundColor: '#1a1d27',
+    borderRadius: 999,
+    height: 8,
+    marginTop: 7,
+    overflow: 'hidden',
+  },
+  progressFill: { backgroundColor: '#22c55e', height: 8 },
+  playerElo: { color: '#f59e0b', fontSize: 28, fontWeight: '900', marginTop: 16 },
+  eloHint: { color: '#9ca3af', fontSize: 12, marginTop: 4 },
+  streakText: { color: '#f59e0b', fontSize: 20, fontWeight: '900', marginTop: 12 },
+  teamStatsCard: {
+    backgroundColor: '#1a1d27',
+    borderColor: '#2a2d3a',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 28,
+    padding: 16,
+  },
+  teamStatsHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  teamStatsRow: { flexDirection: 'row' },
+  rankBadge: {
+    backgroundColor: '#f59e0b22',
+    borderRadius: 999,
+    color: '#f59e0b',
+    fontSize: 13,
+    fontWeight: '900',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  formDots: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  formDot: {
+    alignItems: 'center',
+    borderRadius: 16,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+  formDotText: { fontSize: 13, fontWeight: '900' },
+  formHint: { color: '#888', fontSize: 12, marginTop: 10 },
   skillRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
   skillLabel: { color: '#fff', fontSize: 14, width: 110 },
   skillBarBg: { flex: 1, height: 6, backgroundColor: '#1a1d27', borderRadius: 3, overflow: 'hidden' },

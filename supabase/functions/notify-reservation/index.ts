@@ -3,16 +3,74 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 serve(async (req) => {
   try {
-    const { type, reservationId, userId } = await req.json()
+    const { type, reservationId, userId, targetUserId, fromTeamName, requestId } = await req.json()
 
-    if (!type || !reservationId) {
-      return new Response('Missing type or reservationId', { status: 400 })
+    if (!type) {
+      return new Response('Missing type', { status: 400 })
     }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
+
+    if (type === 'MATCH_PROPOSAL') {
+      if (!targetUserId || !requestId) {
+        return new Response('Missing targetUserId or requestId', { status: 400 })
+      }
+
+      const title = 'Nueva propuesta de partido'
+      const body = `${fromTeamName ?? 'Un equipo'} quiere jugar contra vos`
+
+      const { data: targetUser, error: userError } = await supabase
+        .from('users')
+        .select('push_token')
+        .eq('id', targetUserId)
+        .single()
+
+      if (userError) {
+        console.error('[notify-reservation] Error loading proposal target user', userError)
+      }
+
+      const { error: insertError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: targetUserId,
+          type,
+          payload: { title, body, requestId },
+          read: false,
+        })
+
+      if (insertError) {
+        console.error('[notify-reservation] Error inserting proposal notification', insertError)
+      }
+
+      let sent = 0
+      const Expo = await import('https://esm.sh/expo-server-sdk@3.7.0')
+      const expo = new Expo.Expo()
+
+      if (targetUser?.push_token && Expo.Expo.isExpoPushToken(targetUser.push_token)) {
+        await expo.sendPushNotificationsAsync([
+          {
+            to: targetUser.push_token,
+            title,
+            body,
+            data: { requestId, type },
+            sound: 'default',
+          },
+        ])
+        sent = 1
+      }
+
+      return new Response(
+        JSON.stringify({ sent }),
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!reservationId) {
+      return new Response('Missing reservationId', { status: 400 })
+    }
 
     const { data: reservation, error: reservationError } = await supabase
       .from('reservations')

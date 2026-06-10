@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,11 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useMyMatches, useCreateMatch, Match, MatchStatus } from '@/hooks/useMatch';
 import { useMyTeams } from '@/hooks/useTeams';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 const STATUS_LABELS: Record<MatchStatus, string> = {
   seeking_opponent: 'Buscando rival',
@@ -24,6 +26,7 @@ const STATUS_LABELS: Record<MatchStatus, string> = {
 
 export default function MatchesScreen() {
   const router = useRouter();
+  const { userId } = useAuth();
   const { data: matches, isLoading } = useMyMatches();
   const { data: teams } = useMyTeams();
   const createMatch = useCreateMatch();
@@ -31,6 +34,43 @@ export default function MatchesScreen() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [location, setLocation] = useState('');
+  const [resultMatchIds, setResultMatchIds] = useState<Set<string>>(new Set());
+
+  const captainTeamIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (!userId) return ids;
+
+    teams?.forEach((row) => {
+      const team = Array.isArray(row.teams) ? row.teams[0] : row.teams;
+      if (team?.created_by === userId) {
+        ids.add(row.team_id);
+      }
+    });
+
+    return ids;
+  }, [teams, userId]);
+
+  useEffect(() => {
+    if (!matches?.length) {
+      setResultMatchIds(new Set());
+      return;
+    }
+
+    const loadResults = async () => {
+      const { data } = await supabase
+        .from('match_results')
+        .select('match_id')
+        .in(
+          'match_id',
+          matches.map((match) => match.id)
+        )
+        .returns<Array<{ match_id: string }>>();
+
+      setResultMatchIds(new Set((data ?? []).map((row) => row.match_id)));
+    };
+
+    loadResults();
+  }, [matches]);
 
   async function handleCreate() {
     if (!selectedTeamId) return Alert.alert('Selecciona un equipo');
@@ -43,17 +83,26 @@ export default function MatchesScreen() {
       });
       setShowCreate(false);
       setLocation('');
-      router.push(`/match/${match.id}`);
+      router.push(`/match/${match.id}` as Href);
     } catch (e: unknown) {
       Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo crear');
     }
   }
 
   function renderItem({ item }: { item: Match }) {
+    const alreadyHasResult = resultMatchIds.has(item.id);
+    const hasAwayTeam = item.away_team_id !== null;
+    const alreadyOccurred = new Date(item.scheduled_at).getTime() < Date.now();
+    const canRegisterResult =
+      alreadyOccurred &&
+      hasAwayTeam &&
+      captainTeamIds.has(item.home_team_id) &&
+      !alreadyHasResult;
+
     return (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => router.push(`/match/${item.id}`)}
+        onPress={() => router.push(`/match/${item.id}` as Href)}
       >
         <View style={styles.cardHeader}>
           <Text style={styles.date}>
@@ -68,6 +117,23 @@ export default function MatchesScreen() {
         </View>
         {item.location ? (
           <Text style={styles.location}>{item.location}</Text>
+        ) : null}
+        {canRegisterResult ? (
+          <TouchableOpacity
+            style={styles.resultBtn}
+            onPress={() =>
+              router.push({
+                pathname: '/partido/resultado/[matchId]',
+                params: {
+                  matchId: item.id,
+                  teamHomeId: item.home_team_id,
+                  teamAwayId: item.away_team_id ?? '',
+                },
+              })
+            }
+          >
+            <Text style={styles.resultBtnText}>Registrar resultado -&gt;</Text>
+          </TouchableOpacity>
         ) : null}
       </TouchableOpacity>
     );
@@ -196,6 +262,16 @@ const styles = StyleSheet.create({
   date: { color: '#fff', fontSize: 16, fontWeight: '700' },
   status: { color: '#22c55e', fontSize: 12, fontWeight: '600' },
   location: { color: '#888', marginTop: 8, fontSize: 14 },
+  resultBtn: {
+    alignSelf: 'flex-start',
+    borderColor: '#22c55e',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  resultBtnText: { color: '#22c55e', fontSize: 12, fontWeight: '800' },
   empty: { alignItems: 'center', marginTop: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
   emptyText: { color: '#fff', fontSize: 18, fontWeight: '600' },

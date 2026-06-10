@@ -20,6 +20,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 *.log
+mobile/expo-go-qr.png
 
 # OS / editor
 .DS_Store
