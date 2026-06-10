@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { type Href, useRouter } from 'expo-router';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RankingRow } from '@/components/ranking/RankingRow';
+import { AnimatedCard } from '@/components/ui/AnimatedCard';
 import { SkeletonBox } from '@/components/ui/SkeletonBox';
 import { useRanking } from '@/hooks/useMatchmaking';
 import { supabase } from '@/lib/supabase';
@@ -72,12 +73,14 @@ export default function RankingScreen() {
         data={ranking}
         keyExtractor={(item) => item.team_id}
         renderItem={({ item, index }) => (
-          <RankingRow
-            position={index + 1}
-            team={item}
-            isMyTeam={item.team_id === activeTeamId}
-            onPress={() => router.push(`/equipo/${item.team_id}` as Href)}
-          />
+          <AnimatedCard delay={index * 80} style={styles.animatedRow}>
+            <RankingRow
+              position={index + 1}
+              team={item}
+              isMyTeam={item.team_id === activeTeamId}
+              onPress={() => router.push(`/equipo/${item.team_id}` as Href)}
+            />
+          </AnimatedCard>
         )}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
@@ -201,4 +204,5 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   skeletonText: { flex: 1, gap: 7 },
+  animatedRow: { backgroundColor: 'transparent', elevation: 0, marginBottom: 0, shadowOpacity: 0 },
 });

@@ -22,20 +22,11 @@ function RootLayoutNav() {
     } else if (session && inAuthGroup) {
       router.replace('/feed');
     }
-  }, [session, loading, segments, navigationState?.key]);
+  }, [session, loading, segments, navigationState?.key, router]);
 
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="match" options={{ headerShown: false }} />
-        <Stack.Screen name="rival" options={{ headerShown: false }} />
-        <Stack.Screen name="ranking" options={{ headerShown: false }} />
-        <Stack.Screen name="equipo" options={{ headerShown: false }} />
-        <Stack.Screen name="partido" options={{ headerShown: false }} />
-      </Stack>
+      <Stack screenOptions={{ headerShown: false }} />
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#22c55e" />

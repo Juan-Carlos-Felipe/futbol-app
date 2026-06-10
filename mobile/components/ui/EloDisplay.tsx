@@ -1,12 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
-import type { DimensionValue } from 'react-native';
 import { getLevel } from '@/lib/elo';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 
 type EloDisplayProps = {
   elo: number;
   showLevel?: boolean;
   showProgress?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  eloChanged?: boolean;
 };
 
 const FONT_SIZE = {
@@ -22,20 +23,11 @@ export default function EloDisplay({
   size = 'md',
 }: EloDisplayProps) {
   const level = getLevel(elo);
-  const progressWidth = `${level.progress}%` as DimensionValue;
 
   return (
     <View style={styles.container}>
       <View style={styles.eloRow}>
-        <Text
-          style={[
-            styles.eloText,
-            {
-              color: level.badgeColor,
-              fontSize: FONT_SIZE[size],
-            },
-          ]}
-        >
+        <Text style={[styles.eloText, { color: level.badgeColor, fontSize: FONT_SIZE[size] }]}>
           {level.icon} ELO: {elo.toLocaleString('es-CL')}
         </Text>
       </View>
@@ -56,17 +48,7 @@ export default function EloDisplay({
             </Text>
             <Text style={styles.progressLabel}>{level.progress.toLocaleString('es-CL')}%</Text>
           </View>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  backgroundColor: level.badgeColor,
-                  width: progressWidth,
-                },
-              ]}
-            />
-          </View>
+          <ProgressBar progress={level.progress} color={level.badgeColor} height={6} />
         </View>
       ) : null}
     </View>
@@ -91,11 +73,4 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   progressLabel: { color: '#6b7280', fontSize: 11, fontWeight: '800' },
-  progressTrack: {
-    backgroundColor: '#e5e7eb',
-    borderRadius: 3,
-    height: 6,
-    overflow: 'hidden',
-  },
-  progressFill: { borderRadius: 3, height: 6 },
 });

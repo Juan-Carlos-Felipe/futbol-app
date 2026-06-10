@@ -14,6 +14,8 @@ import {
 import { CreateRequestModal } from '@/components/matchmaking/CreateRequestModal';
 import { MatchRequestCard } from '@/components/matchmaking/MatchRequestCard';
 import { MatchRequestSkeleton } from '@/components/matchmaking/MatchRequestSkeleton';
+import { AnimatedCard } from '@/components/ui/AnimatedCard';
+import { PressableScale } from '@/components/ui/PressableScale';
 import { useMatchRequests, useMyTeamRequests } from '@/hooks/useMatchmaking';
 import type { MatchRequest, MatchRequestFilters } from '@/lib/matchmaking';
 import { supabase } from '@/lib/supabase';
@@ -145,7 +147,11 @@ export default function MatchmakingScreen() {
       <FlatList
         data={visibleRequests}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <MatchRequestCard request={item} />}
+        renderItem={({ item, index }) => (
+          <AnimatedCard delay={index * 80} style={styles.animatedListCard}>
+            <MatchRequestCard request={item} />
+          </AnimatedCard>
+        )}
         contentContainerStyle={styles.listContent}
       />
     );
@@ -271,7 +277,7 @@ export default function MatchmakingScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filtersContent}
           >
-            <TouchableOpacity
+            <PressableScale
               style={[styles.chip, Object.keys(filters).length === 0 && styles.chipActive]}
               onPress={() => setFilters({})}
             >
@@ -283,11 +289,11 @@ export default function MatchmakingScreen() {
               >
                 Todos
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
             {FILTER_CHIPS.map((chip) => {
               const active = isSameFilter(filters, chip.filters);
               return (
-                <TouchableOpacity
+                <PressableScale
                   key={chip.label}
                   style={[styles.chip, active && styles.chipActive]}
                   onPress={() => setFilters(active ? {} : chip.filters)}
@@ -295,7 +301,7 @@ export default function MatchmakingScreen() {
                   <Text style={[styles.chipText, active && styles.chipTextActive]}>
                     {chip.label}
                   </Text>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })}
           </ScrollView>
@@ -470,4 +476,10 @@ const styles = StyleSheet.create({
     width: 56,
   },
   fabText: { color: '#ffffff', fontSize: 34, fontWeight: '600', lineHeight: 38 },
+  animatedListCard: {
+    backgroundColor: 'transparent',
+    elevation: 0,
+    marginBottom: 0,
+    shadowOpacity: 0,
+  },
 });

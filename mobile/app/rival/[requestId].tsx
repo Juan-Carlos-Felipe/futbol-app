@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { ProposeMatchModal } from '@/components/matchmaking/ProposeMatchModal';
+import { PressableScale } from '@/components/ui/PressableScale';
 import {
   useAcceptResponse,
   useMatchRequestDetail,
@@ -307,14 +308,17 @@ export default function RivalRequestDetailScreen() {
                   Ya propusiste un partido: {RESPONSE_META[myResponse.status].label}
                 </Text>
               </View>
-              <TouchableOpacity style={[styles.submitButton, styles.submitButtonDisabled]} disabled>
+              <PressableScale style={[styles.submitButton, styles.submitButtonDisabled]} disabled>
                 <Text style={styles.submitText}>Propuesta enviada</Text>
-              </TouchableOpacity>
+              </PressableScale>
             </>
           ) : (
-            <TouchableOpacity style={styles.submitButton} onPress={() => setShowProposeModal(true)}>
+            <PressableScale
+              style={styles.submitButton}
+              onPress={() => setShowProposeModal(true)}
+            >
               <Text style={styles.submitText}>Proponer partido -&gt;</Text>
-            </TouchableOpacity>
+            </PressableScale>
           )}
         </View>
       ) : null}

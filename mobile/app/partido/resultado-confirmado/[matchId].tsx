@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { getEloChange } from '@/lib/elo';
@@ -41,17 +41,7 @@ export default function ConfirmedResultScreen() {
   const [result, setResult] = useState<ResultWithTeams | null>(null);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
   const [eloChange, setEloChange] = useState<EloChangeRow | null>(null);
-  const scale = useRef(new Animated.Value(0)).current;
   const { stats } = useTeamStats(activeTeamId);
-
-  useEffect(() => {
-    Animated.spring(scale, {
-      toValue: 1,
-      friction: 4,
-      tension: 90,
-      useNativeDriver: true,
-    }).start();
-  }, [scale]);
 
   useEffect(() => {
     let mounted = true;
@@ -136,23 +126,7 @@ export default function ConfirmedResultScreen() {
     <View style={[styles.screen, { backgroundColor: meta.backgroundColor }]}>
       {outcome === 'win' ? <Confetti /> : null}
 
-      <Animated.Text
-        style={[
-          styles.icon,
-          {
-            transform: [
-              {
-                scale: scale.interpolate({
-                  inputRange: [0, 0.75, 1],
-                  outputRange: [0, 1.2, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        {meta.icon}
-      </Animated.Text>
+      <Text style={styles.icon}>{meta.icon}</Text>
       <Text style={[styles.title, { color: meta.color }]}>{meta.title}</Text>
       <Text style={styles.score}>
         {result.goals_home.toLocaleString('es-CL')} -{' '}
@@ -186,17 +160,19 @@ export default function ConfirmedResultScreen() {
         </View>
       ) : null}
 
-      <TouchableOpacity
-        style={[styles.outlineButton, { borderColor: meta.color }]}
-        onPress={() => router.push(meta.primaryHref)}
-      >
-        <Text style={[styles.outlineButtonText, { color: meta.color }]}>
-          {meta.primaryLabel}
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => router.replace('/feed' as Href)}>
-        <Text style={styles.homeLink}>Ir al inicio</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonsWrap}>
+        <TouchableOpacity
+          style={[styles.outlineButton, { borderColor: meta.color }]}
+          onPress={() => router.push(meta.primaryHref)}
+        >
+          <Text style={[styles.outlineButtonText, { color: meta.color }]}>
+            {meta.primaryLabel}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.replace('/feed' as Href)}>
+          <Text style={styles.homeLink}>Ir al inicio</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -318,6 +294,7 @@ const styles = StyleSheet.create({
   },
   eloChangeTitle: { color: '#78350f', fontSize: 12, fontWeight: '900' },
   eloChangeText: { color: '#78350f', fontSize: 22, fontWeight: '900', marginTop: 4 },
+  buttonsWrap: { width: '100%' },
   outlineButton: {
     alignItems: 'center',
     borderRadius: 14,

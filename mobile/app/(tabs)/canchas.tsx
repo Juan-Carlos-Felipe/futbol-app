@@ -13,6 +13,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { VenueCard } from '@/components/venues/VenueCard';
+import { AnimatedCard } from '@/components/ui/AnimatedCard';
+import { PressableScale } from '@/components/ui/PressableScale';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import { useVenues } from '@/hooks/useVenues';
 import { Venue, VenueFilters } from '@/lib/venues';
@@ -125,7 +127,7 @@ export default function CanchasScreen() {
         {FILTER_CHIPS.map((chip) => {
           const active = isActiveFilter(filters, chip);
           return (
-            <TouchableOpacity
+            <PressableScale
               key={`${chip.key}-${chip.label}`}
               style={[styles.chip, active && styles.chipActive]}
               onPress={() => setFilters((current) => toggleFilter(current, chip))}
@@ -133,7 +135,7 @@ export default function CanchasScreen() {
               <Text style={[styles.chipText, active && styles.chipTextActive]}>
                 {chip.label}
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
       </ScrollView>
@@ -218,8 +220,10 @@ export default function CanchasScreen() {
           <FlatList
             data={venues}
             keyExtractor={(venue) => venue.id}
-            renderItem={({ item }) => (
-              <VenueCard venue={item} onPress={() => goToVenue(item)} />
+            renderItem={({ item, index }) => (
+              <AnimatedCard delay={index * 80} style={styles.animatedVenueCard}>
+                <VenueCard venue={item} onPress={() => goToVenue(item)} />
+              </AnimatedCard>
             )}
             contentContainerStyle={styles.listContent}
           />
@@ -239,7 +243,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 18,
   },
   headerTitle: {
     color: '#fff',
@@ -394,5 +398,11 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 24,
+  },
+  animatedVenueCard: {
+    backgroundColor: 'transparent',
+    elevation: 0,
+    marginBottom: 0,
+    shadowOpacity: 0,
   },
 });

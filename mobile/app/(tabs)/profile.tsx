@@ -1,28 +1,51 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Image, Alert, ActivityIndicator
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import type { DimensionValue } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
-import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
-import { useAuth } from '@/hooks/useAuth';
-import { useMyTeams } from '@/hooks/useTeams';
-import { usePlayerStats, useRanking, useTeamRecentForm } from '@/hooks/useMatchmaking';
-import { useTeamStats } from '@/hooks/useTeamStats';
+import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
+import AvatarPreview from '@/components/avatar/AvatarPreview';
+import AvatarSetup from '@/components/avatar/AvatarSetup';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import EloDisplay from '@/components/ui/EloDisplay';
 import EloHistoryList from '@/components/ui/EloHistoryList';
-import { getFifaRating } from '@/lib/elo';
-import { supabase } from '@/lib/supabase';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { useAuth } from '@/hooks/useAuth';
+import { usePlayerStats, useRanking, useTeamRecentForm } from '@/hooks/useMatchmaking';
+import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
+import { useTeamStats } from '@/hooks/useTeamStats';
+import { useMyTeams } from '@/hooks/useTeams';
 import { signOut } from '@/lib/auth';
+import {
+  DEFAULT_TEAM_COLOR,
+  loadAvatarConfig,
+  type AvatarConfig,
+} from '@/lib/avatar';
+import { getFifaRating } from '@/lib/elo';
 
 const SKILLS = [
-  { key: 'attack', label: 'Ataque', emoji: '⚡' },
-  { key: 'defense', label: 'Defensa', emoji: '🛡️' },
-  { key: 'speed', label: 'Velocidad', emoji: '💨' },
-  { key: 'stamina', label: 'Resistencia', emoji: '❤️' },
+  { key: 'attack', label: 'Ataque', icon: 'ATQ' },
+  { key: 'defense', label: 'Defensa', icon: 'DEF' },
+  { key: 'speed', label: 'Velocidad', icon: 'VEL' },
+  { key: 'stamina', label: 'Resistencia', icon: 'RES' },
 ] as const;
+
+type SkillKey = (typeof SKILLS)[number]['key'];
+type SkillsMap = Record<SkillKey, number>;
+
+const DEFAULT_SKILLS: SkillsMap = {
+  attack: 50,
+  defense: 50,
+  speed: 50,
+  stamina: 50,
+};
 
 export default function ProfileScreen() {
   const { userId } = useAuth();
@@ -34,10 +57,11 @@ export default function ProfileScreen() {
   const { stats: teamStats, winRate: teamWinRate } = useTeamStats(activeTeamId);
   const { ranking } = useRanking(50);
   const { form } = useTeamRecentForm(activeTeamId);
-
   const [displayName, setDisplayName] = useState('');
   const [editing, setEditing] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(null);
+  const [showAvatarSetup, setShowAvatarSetup] = useState(false);
+
   const playerWinRate =
     playerStats && playerStats.matches_played > 0
       ? Math.round((playerStats.wins / playerStats.matches_played) * 100)
@@ -48,87 +72,69 @@ export default function ProfileScreen() {
   const playerElo = playerStats?.elo ?? 1000;
   const fifaRating = getFifaRating(playerElo);
 
+  useEffect(() => {
+    let mounted = true;
+
+    if (!userId) {
+      setAvatarConfig(null);
+      return;
+    }
+
+    loadAvatarConfig(userId).then((config) => {
+      if (mounted) setAvatarConfig(config);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
+
   if (isLoading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center' }]}>
+      <View style={[styles.container, styles.centered]}>
         <ActivityIndicator color="#22c55e" />
       </View>
     );
   }
 
-  const skills = profile?.skills ?? { attack: 50, defense: 50, speed: 50, stamina: 50 };
-
-  async function pickAndUploadAvatar() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (result.canceled) return;
-
-    setUploadingAvatar(true);
-    try {
-      const compressed = await ImageManipulator.manipulateAsync(
-        result.assets[0].uri,
-        [{ resize: { width: 300, height: 300 } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-      );
-
-      const fileExt = 'jpg';
-      const fileName = `${userId}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      const response = await fetch(compressed.uri);
-      const blob = await response.blob();
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, blob, { upsert: true, contentType: 'image/jpeg' });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      await updateProfile.mutateAsync({ avatar_url: publicUrl });
-    } catch (e: any) {
-      Alert.alert('Error al subir imagen', e.message);
-    } finally {
-      setUploadingAvatar(false);
-    }
-  }
+  const skills = (profile?.skills as SkillsMap | undefined) ?? DEFAULT_SKILLS;
 
   async function saveProfile() {
     if (!displayName.trim()) return;
     try {
       await updateProfile.mutateAsync({ display_name: displayName.trim() });
       setEditing(false);
-    } catch (e: any) {
-      Alert.alert('Error', e.message);
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'No se pudo guardar.');
     }
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 24 }}>
-      <View style={styles.avatarSection}>
-        <TouchableOpacity onPress={pickAndUploadAvatar} disabled={uploadingAvatar}>
-          {profile?.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.avatarHero}>
+        <View style={styles.avatarStage}>
+          {avatarConfig?.avatarUrl ? (
+            <AvatarPreview
+              avatarUrl={avatarConfig.avatarUrl}
+              pose={avatarConfig.selectedPose}
+              teamColor={avatarConfig.teamColor}
+              width={160}
+              height={240}
+              autoRotate
+            />
           ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={{ fontSize: 40 }}>👤</Text>
-            </View>
+            <AvatarPlaceholder size="lg" teamColor={avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR} />
           )}
-          {uploadingAvatar && (
-            <View style={styles.avatarOverlay}>
-              <ActivityIndicator color="#fff" />
-            </View>
-          )}
-          <Text style={styles.changePhoto}>Cambiar foto</Text>
-        </TouchableOpacity>
+          <View style={styles.ratingOverlay}>
+            <AnimatedNumber value={fifaRating} style={styles.ratingOverlayValue} />
+            <Text style={styles.ratingOverlayLabel}>RAT</Text>
+          </View>
+        </View>
+        {userId ? (
+          <TouchableOpacity style={styles.editAvatarButton} onPress={() => setShowAvatarSetup(true)}>
+            <Text style={styles.editAvatarText}>Editar avatar</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <View style={styles.section}>
@@ -143,15 +149,18 @@ export default function ProfileScreen() {
               autoFocus
             />
             <TouchableOpacity style={styles.saveBtn} onPress={saveProfile}>
-              <Text style={styles.saveBtnText}>✓</Text>
+              <Text style={styles.saveBtnText}>OK</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <TouchableOpacity
-            onPress={() => { setDisplayName(profile?.display_name ?? ''); setEditing(true); }}
+            onPress={() => {
+              setDisplayName(profile?.display_name ?? '');
+              setEditing(true);
+            }}
           >
-            <Text style={styles.name}>{profile?.display_name}</Text>
-            <Text style={styles.editHint}>Toca para editar ✏️</Text>
+            <Text style={styles.name}>{profile?.display_name ?? 'Jugador'}</Text>
+            <Text style={styles.editHint}>Toca para editar</Text>
           </TouchableOpacity>
         )}
         <Text style={styles.email}>{profile?.email}</Text>
@@ -161,7 +170,7 @@ export default function ProfileScreen() {
         <Text style={styles.statsEyebrow}>MIS STATS</Text>
         <View style={styles.ratingRow}>
           <View style={styles.fifaRatingCard}>
-            <Text style={styles.fifaRating}>{fifaRating.toLocaleString('es-CL')}</Text>
+            <AnimatedNumber value={fifaRating} style={styles.fifaRating} />
             <Text style={styles.fifaRatingLabel}>RAT</Text>
           </View>
           <View style={styles.eloDisplayWrap}>
@@ -175,17 +184,11 @@ export default function ProfileScreen() {
           <StatTile label="Derrotas" value={playerStats?.losses ?? 0} color="#ef4444" />
           <StatTile label="Empates" value={playerStats?.draws ?? 0} color="#f59e0b" />
           <StatTile label="Goles" value={playerStats?.goals ?? 0} color="#fbbf24" />
-          <StatTile label="Asistencias" value={playerStats?.assists ?? 0} color="#60a5fa" />
+          <StatTile label="Asist." value={playerStats?.assists ?? 0} color="#60a5fa" />
         </View>
 
         <ProgressRow label="% victorias como jugador" value={playerWinRate} />
-
         <Text style={styles.eloHint}>Ranking personal basado en tus resultados</Text>
-        {(playerStats?.win_streak ?? 0) > 0 ? (
-          <Text style={styles.streakText}>
-            🔥 Racha de {playerStats?.win_streak.toLocaleString('es-CL')} victorias
-          </Text>
-        ) : null}
       </View>
 
       <View style={styles.teamStatsCard}>
@@ -224,23 +227,40 @@ export default function ProfileScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Habilidades</Text>
-        {SKILLS.map(({ key, label, emoji }) => (
+        {SKILLS.map(({ key, label, icon }) => (
           <View key={key} style={styles.skillRow}>
-            <Text style={styles.skillLabel}>{emoji} {label}</Text>
+            <Text style={styles.skillLabel}>
+              {icon} {label}
+            </Text>
             <View style={styles.skillBarBg}>
               <View style={[styles.skillBarFill, { width: `${skills[key]}%` }]} />
             </View>
             <Text style={styles.skillValue}>{skills[key]}</Text>
           </View>
         ))}
-        <Text style={styles.skillNote}>
-          * Las habilidades suben con la actividad en partidos
-        </Text>
+        <Text style={styles.skillNote}>Las habilidades suben con la actividad en partidos</Text>
       </View>
 
       <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
-        <Text style={styles.logoutText}>Cerrar sesión</Text>
+        <Text style={styles.logoutText}>Cerrar sesion</Text>
       </TouchableOpacity>
+
+      {userId ? (
+        <Modal
+          visible={showAvatarSetup}
+          animationType="slide"
+          onRequestClose={() => setShowAvatarSetup(false)}
+        >
+          <AvatarSetup
+            userId={userId}
+            currentConfig={avatarConfig}
+            onComplete={(config) => {
+              setAvatarConfig(config);
+              setShowAvatarSetup(false);
+            }}
+          />
+        </Modal>
+      ) : null}
     </ScrollView>
   );
 }
@@ -248,24 +268,20 @@ export default function ProfileScreen() {
 function StatTile({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <View style={styles.statTile}>
-      <Text style={[styles.statTileValue, { color }]}>{value.toLocaleString('es-CL')}</Text>
+      <AnimatedNumber value={value} style={[styles.statTileValue, { color }]} />
       <Text style={styles.statTileLabel}>{label}</Text>
     </View>
   );
 }
 
 function ProgressRow({ label, value }: { label: string; value: number }) {
-  const width = `${Math.max(0, Math.min(100, value))}%` as DimensionValue;
-
   return (
     <View style={styles.progressWrap}>
       <View style={styles.progressLabelRow}>
         <Text style={styles.progressLabel}>{label}</Text>
         <Text style={styles.progressValue}>{value.toLocaleString('es-CL')}%</Text>
       </View>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width }]} />
-      </View>
+      <ProgressBar progress={value} color="#22c55e" />
     </View>
   );
 }
@@ -285,34 +301,75 @@ function FormDot({ result }: { result: 'win' | 'draw' | 'loss' }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117' },
-  avatarSection: { alignItems: 'center', marginBottom: 24 },
-  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: '#22c55e' },
-  avatarPlaceholder: {
-    width: 100, height: 100, borderRadius: 50,
-    backgroundColor: '#1a1d27', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: '#2a2d3a'
+  container: { backgroundColor: '#0f1117', flex: 1 },
+  content: { padding: 24, paddingBottom: 36 },
+  centered: { alignItems: 'center', justifyContent: 'center' },
+  avatarHero: {
+    alignItems: 'center',
+    backgroundColor: '#08130d',
+    borderColor: '#1f3f2c',
+    borderRadius: 18,
+    borderWidth: 1,
+    marginBottom: 24,
+    overflow: 'hidden',
+    paddingTop: 12,
   },
-  avatarOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 50,
-    alignItems: 'center', justifyContent: 'center'
+  avatarStage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 250,
+    width: '100%',
   },
-  changePhoto: { color: '#22c55e', marginTop: 8, fontSize: 13 },
+  ratingOverlay: {
+    alignItems: 'center',
+    backgroundColor: '#f59e0b',
+    borderRadius: 12,
+    bottom: 18,
+    left: 24,
+    minWidth: 68,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    position: 'absolute',
+  },
+  ratingOverlayValue: { color: '#78350f', fontSize: 28, fontWeight: '900' },
+  ratingOverlayLabel: { color: '#78350f', fontSize: 10, fontWeight: '900' },
+  editAvatarButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 999,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  editAvatarText: { color: '#ffffff', fontSize: 13, fontWeight: '900' },
   section: { marginBottom: 28 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontSize: 24, fontWeight: '800', color: '#fff' },
+  row: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  name: { color: '#fff', fontSize: 24, fontWeight: '800' },
   editHint: { color: '#666', fontSize: 12, marginTop: 2 },
   email: { color: '#888', fontSize: 14, marginTop: 4 },
   input: {
-    backgroundColor: '#1a1d27', color: '#fff', borderRadius: 10,
-    padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#2a2d3a'
+    backgroundColor: '#1a1d27',
+    borderColor: '#2a2d3a',
+    borderRadius: 10,
+    borderWidth: 1,
+    color: '#fff',
+    fontSize: 16,
+    padding: 12,
   },
   saveBtn: {
-    backgroundColor: '#22c55e', borderRadius: 10, padding: 12, alignItems: 'center', minWidth: 44
+    alignItems: 'center',
+    backgroundColor: '#22c55e',
+    borderRadius: 10,
+    minWidth: 44,
+    padding: 12,
   },
-  saveBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  sectionTitle: { color: '#888', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', marginBottom: 16 },
+  saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '900' },
+  sectionTitle: {
+    color: '#888',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 16,
+    textTransform: 'uppercase',
+  },
   statsCard: {
     backgroundColor: '#0a3d1f',
     borderRadius: 16,
@@ -343,19 +400,14 @@ const styles = StyleSheet.create({
   statTileValue: { fontSize: 28, fontWeight: '900' },
   statTileLabel: { color: '#9ca3af', fontSize: 11, fontWeight: '800', marginTop: 3 },
   progressWrap: { marginTop: 14 },
-  progressLabelRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  progressLabelRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   progressLabel: { color: '#d1d5db', fontSize: 12, fontWeight: '700' },
   progressValue: { color: '#22c55e', fontSize: 12, fontWeight: '900' },
-  progressTrack: {
-    backgroundColor: '#1a1d27',
-    borderRadius: 999,
-    height: 8,
-    marginTop: 7,
-    overflow: 'hidden',
-  },
-  progressFill: { backgroundColor: '#22c55e', height: 8 },
   eloHint: { color: '#9ca3af', fontSize: 12, marginTop: 4 },
-  streakText: { color: '#f59e0b', fontSize: 20, fontWeight: '900', marginTop: 12 },
   teamStatsCard: {
     backgroundColor: '#1a1d27',
     borderColor: '#2a2d3a',
@@ -364,7 +416,11 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     padding: 16,
   },
-  teamStatsHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  teamStatsHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   teamStatsRow: { flexDirection: 'row' },
   rankBadge: {
     backgroundColor: '#f59e0b22',
@@ -385,12 +441,24 @@ const styles = StyleSheet.create({
   },
   formDotText: { fontSize: 13, fontWeight: '900' },
   formHint: { color: '#888', fontSize: 12, marginTop: 10 },
-  skillRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
-  skillLabel: { color: '#fff', fontSize: 14, width: 110 },
-  skillBarBg: { flex: 1, height: 6, backgroundColor: '#1a1d27', borderRadius: 3, overflow: 'hidden' },
-  skillBarFill: { height: '100%', backgroundColor: '#22c55e', borderRadius: 3 },
-  skillValue: { color: '#888', fontSize: 12, width: 30, textAlign: 'right' },
-  skillNote: { color: '#444', fontSize: 11, marginTop: 8, fontStyle: 'italic' },
-  logoutBtn: { borderWidth: 1, borderColor: '#ef4444', borderRadius: 12, padding: 14, alignItems: 'center' },
+  skillRow: { alignItems: 'center', flexDirection: 'row', gap: 10, marginBottom: 12 },
+  skillLabel: { color: '#fff', fontSize: 14, width: 118 },
+  skillBarBg: {
+    backgroundColor: '#1a1d27',
+    borderRadius: 3,
+    flex: 1,
+    height: 6,
+    overflow: 'hidden',
+  },
+  skillBarFill: { backgroundColor: '#22c55e', borderRadius: 3, height: '100%' },
+  skillValue: { color: '#888', fontSize: 12, textAlign: 'right', width: 30 },
+  skillNote: { color: '#444', fontSize: 11, fontStyle: 'italic', marginTop: 8 },
+  logoutBtn: {
+    alignItems: 'center',
+    borderColor: '#ef4444',
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+  },
   logoutText: { color: '#ef4444', fontWeight: '600' },
 });
