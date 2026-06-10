@@ -19,6 +19,8 @@ import {
   useTeamProfile,
   useTeamRecentForm,
 } from '@/hooks/useMatchmaking';
+import EloDisplay from '@/components/ui/EloDisplay';
+import EloHistoryList from '@/components/ui/EloHistoryList';
 import type { TeamMatchHistoryItem, TeamStats } from '@/lib/matchmaking';
 import { supabase } from '@/lib/supabase';
 
@@ -44,7 +46,7 @@ function emptyStats(teamId: string): TeamStats {
     goals_against: 0,
     win_streak: 0,
     best_streak: 0,
-    elo: 0,
+    elo: 1000,
     updated_at: new Date(0).toISOString(),
   };
 }
@@ -185,6 +187,9 @@ export default function TeamPublicProfileScreen() {
         </View>
 
         <View style={styles.statsCard}>
+          <View style={styles.teamEloBlock}>
+            <EloDisplay elo={stats.elo} showLevel showProgress size="md" />
+          </View>
           <View style={styles.statsGrid}>
             <StatCell label="Partidos jugados" value={stats.matches_played} color="#111827" />
             <StatCell label="Victorias" value={stats.wins} color="#16a34a" bordered />
@@ -275,6 +280,11 @@ export default function TeamPublicProfileScreen() {
               <MatchRow key={match.id} match={match} teamId={normalizedTeamId} />
             ))
           )}
+        </Section>
+
+        <Section>
+          <Text style={styles.sectionTitle}>Historial ELO</Text>
+          <EloHistoryList teamId={normalizedTeamId} />
         </Section>
 
         <View style={styles.ctaWrap}>
@@ -414,6 +424,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 16,
   },
+  teamEloBlock: { marginBottom: 16 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   statCell: { alignItems: 'center', paddingVertical: 10, width: '33.333%' },
   statCellBorder: { borderLeftColor: '#e5e7eb', borderLeftWidth: 1 },

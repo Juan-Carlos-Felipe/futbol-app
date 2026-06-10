@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTeamStats } from '@/hooks/useTeamStats';
+import { getEloChange } from '@/lib/elo';
 import { supabase } from '@/lib/supabase';
 
 type ResultWithTeams = {
@@ -16,6 +17,12 @@ type ResultWithTeams = {
 };
 
 type Outcome = 'win' | 'loss' | 'draw';
+
+type EloChangeRow = {
+  elo_before: number;
+  elo_after: number;
+  change: number;
+};
 
 function getOutcome(result: ResultWithTeams, teamId: string | null): Outcome {
   const isHome = teamId === result.team_home_id;
@@ -33,6 +40,7 @@ export default function ConfirmedResultScreen() {
   const normalizedMatchId = typeof matchId === 'string' ? matchId : '';
   const [result, setResult] = useState<ResultWithTeams | null>(null);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+  const [eloChange, setEloChange] = useState<EloChangeRow | null>(null);
   const scale = useRef(new Animated.Value(0)).current;
   const { stats } = useTeamStats(activeTeamId);
 
@@ -52,6 +60,8 @@ export default function ConfirmedResultScreen() {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
 
+      let currentTeamId: string | null = null;
+
       if (userId) {
         const { data: membership } = await supabase
           .from('team_members')
@@ -60,7 +70,8 @@ export default function ConfirmedResultScreen() {
           .limit(1)
           .maybeSingle<{ team_id: string }>();
 
-        if (mounted) setActiveTeamId(membership?.team_id ?? null);
+        currentTeamId = membership?.team_id ?? null;
+        if (mounted) setActiveTeamId(currentTeamId);
       }
 
       const { data } = await supabase
@@ -86,6 +97,18 @@ export default function ConfirmedResultScreen() {
         .returns<ResultWithTeams[]>();
 
       if (mounted) setResult(data?.[0] ?? null);
+
+      if (currentTeamId) {
+        const { data: historyRows } = await supabase
+          .from('elo_history')
+          .select('elo_before, elo_after, change')
+          .eq('match_id', normalizedMatchId)
+          .eq('team_id', currentTeamId)
+          .limit(1)
+          .returns<EloChangeRow[]>();
+
+        if (mounted) setEloChange(historyRows?.[0] ?? null);
+      }
     }
 
     load();
@@ -150,6 +173,17 @@ export default function ConfirmedResultScreen() {
         </View>
       ) : outcome === 'loss' ? (
         <Text style={styles.message}>El proximo sera tuyo 💪</Text>
+      ) : null}
+
+      {eloChange ? (
+        <View style={styles.eloChangeCard}>
+          <Text style={styles.eloChangeTitle}>Tu ELO</Text>
+          <Text style={styles.eloChangeText}>
+            {eloChange.elo_before.toLocaleString('es-CL')} -&gt;{' '}
+            {eloChange.elo_after.toLocaleString('es-CL')}{' '}
+            ({getEloChange(eloChange.elo_before, eloChange.elo_after).display})
+          </Text>
+        </View>
       ) : null}
 
       <TouchableOpacity
@@ -274,6 +308,16 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 24, fontWeight: '900' },
   statLabel: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: '800', marginTop: 3 },
   message: { color: '#9ca3af', fontSize: 16, fontWeight: '800', marginTop: 22 },
+  eloChangeCard: {
+    alignItems: 'center',
+    backgroundColor: '#f59e0b',
+    borderRadius: 16,
+    marginTop: 18,
+    padding: 16,
+    width: '100%',
+  },
+  eloChangeTitle: { color: '#78350f', fontSize: 12, fontWeight: '900' },
+  eloChangeText: { color: '#78350f', fontSize: 22, fontWeight: '900', marginTop: 4 },
   outlineButton: {
     alignItems: 'center',
     borderRadius: 14,

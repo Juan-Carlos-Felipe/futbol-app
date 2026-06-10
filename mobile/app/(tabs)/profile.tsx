@@ -11,6 +11,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMyTeams } from '@/hooks/useTeams';
 import { usePlayerStats, useRanking, useTeamRecentForm } from '@/hooks/useMatchmaking';
 import { useTeamStats } from '@/hooks/useTeamStats';
+import EloDisplay from '@/components/ui/EloDisplay';
+import EloHistoryList from '@/components/ui/EloHistoryList';
+import { getFifaRating } from '@/lib/elo';
 import { supabase } from '@/lib/supabase';
 import { signOut } from '@/lib/auth';
 
@@ -42,6 +45,8 @@ export default function ProfileScreen() {
   const teamRankingPosition = activeTeamId
     ? ranking.findIndex((team) => team.team_id === activeTeamId) + 1
     : 0;
+  const playerElo = playerStats?.elo ?? 1000;
+  const fifaRating = getFifaRating(playerElo);
 
   if (isLoading) {
     return (
@@ -154,6 +159,16 @@ export default function ProfileScreen() {
 
       <View style={styles.statsCard}>
         <Text style={styles.statsEyebrow}>MIS STATS</Text>
+        <View style={styles.ratingRow}>
+          <View style={styles.fifaRatingCard}>
+            <Text style={styles.fifaRating}>{fifaRating.toLocaleString('es-CL')}</Text>
+            <Text style={styles.fifaRatingLabel}>RAT</Text>
+          </View>
+          <View style={styles.eloDisplayWrap}>
+            <EloDisplay elo={playerElo} showLevel size="lg" />
+          </View>
+        </View>
+
         <View style={styles.statsGrid}>
           <StatTile label="Partidos" value={playerStats?.matches_played ?? 0} color="#d1d5db" />
           <StatTile label="Victorias" value={playerStats?.wins ?? 0} color="#22c55e" />
@@ -165,9 +180,6 @@ export default function ProfileScreen() {
 
         <ProgressRow label="% victorias como jugador" value={playerWinRate} />
 
-        <Text style={styles.playerElo}>
-          ⚡ ELO: {(playerStats?.elo ?? 0).toLocaleString('es-CL')}
-        </Text>
         <Text style={styles.eloHint}>Ranking personal basado en tus resultados</Text>
         {(playerStats?.win_streak ?? 0) > 0 ? (
           <Text style={styles.streakText}>
@@ -202,6 +214,13 @@ export default function ProfileScreen() {
         </View>
         <Text style={styles.formHint}>Ultimos 5 partidos</Text>
       </View>
+
+      {activeTeamId ? (
+        <View style={styles.teamStatsCard}>
+          <Text style={styles.sectionTitle}>Historial ELO</Text>
+          <EloHistoryList teamId={activeTeamId} />
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Habilidades</Text>
@@ -307,6 +326,18 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 12,
   },
+  ratingRow: { alignItems: 'center', flexDirection: 'row', gap: 14, marginBottom: 14 },
+  fifaRatingCard: {
+    alignItems: 'center',
+    backgroundColor: '#f59e0b',
+    borderRadius: 12,
+    minWidth: 72,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  fifaRating: { color: '#78350f', fontSize: 34, fontWeight: '900' },
+  fifaRatingLabel: { color: '#78350f', fontSize: 11, fontWeight: '900', marginTop: -2 },
+  eloDisplayWrap: { flex: 1 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   statTile: { alignItems: 'center', paddingVertical: 10, width: '33.333%' },
   statTileValue: { fontSize: 28, fontWeight: '900' },
@@ -323,7 +354,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressFill: { backgroundColor: '#22c55e', height: 8 },
-  playerElo: { color: '#f59e0b', fontSize: 28, fontWeight: '900', marginTop: 16 },
   eloHint: { color: '#9ca3af', fontSize: 12, marginTop: 4 },
   streakText: { color: '#f59e0b', fontSize: 20, fontWeight: '900', marginTop: 12 },
   teamStatsCard: {

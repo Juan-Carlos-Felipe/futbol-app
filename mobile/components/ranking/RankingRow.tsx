@@ -1,5 +1,6 @@
 import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
 import type { TeamStats } from '@/lib/matchmaking';
+import { getLevel } from '@/lib/elo';
 
 type RankingRowProps = {
   position: number;
@@ -27,6 +28,7 @@ function getMedal(position: number) {
 
 export function RankingRow({ position, team, isMyTeam = false, onPress }: RankingRowProps) {
   const medal = getMedal(position);
+  const level = getLevel(team.elo);
   const winRate =
     team.matches_played > 0 ? Math.round((team.wins / team.matches_played) * 100) : 0;
 
@@ -76,7 +78,12 @@ export function RankingRow({ position, team, isMyTeam = false, onPress }: Rankin
       </View>
 
       <View style={styles.eloColumn}>
-        <Text style={styles.elo}>⚡ {team.elo.toLocaleString('es-CL')}</Text>
+        <Text style={[styles.elo, { color: level.badgeColor }]}>
+          ⚡ {team.elo.toLocaleString('es-CL')}
+        </Text>
+        <Text style={[styles.winRate, { color: level.badgeColor }]} numberOfLines={1}>
+          {level.title}
+        </Text>
         <Text style={styles.winRate}>{winRate.toLocaleString('es-CL')}%</Text>
       </View>
     </TouchableOpacity>
