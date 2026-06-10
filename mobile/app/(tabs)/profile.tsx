@@ -1,3 +1,4 @@
+// ✅ REDISEÑADO con theme.ts
 import { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
@@ -13,6 +14,11 @@ import { usePlayerStats, useRanking, useTeamRecentForm } from '@/hooks/useMatchm
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { supabase } from '@/lib/supabase';
 import { signOut } from '@/lib/auth';
+import { theme } from '@/lib/theme';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { ResultBadge } from '@/components/ui/ResultBadge';
+import { Stack } from 'expo-router';
 
 const SKILLS = [
   { key: 'attack', label: 'Ataque', emoji: '⚡' },
@@ -46,7 +52,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { justifyContent: 'center' }]}>
-        <ActivityIndicator color="#22c55e" />
+        <ActivityIndicator color={theme.colors.primary} />
       </View>
     );
   }
@@ -107,130 +113,129 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 24 }}>
-      <View style={styles.avatarSection}>
-        <TouchableOpacity onPress={pickAndUploadAvatar} disabled={uploadingAvatar}>
-          {profile?.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={{ fontSize: 40 }}>👤</Text>
-            </View>
-          )}
-          {uploadingAvatar && (
-            <View style={styles.avatarOverlay}>
-              <ActivityIndicator color="#fff" />
-            </View>
-          )}
-          <Text style={styles.changePhoto}>Cambiar foto</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <Stack.Screen options={{
+        title: 'PERFIL',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerShown: true
+      }} />
 
-      <View style={styles.section}>
-        {editing ? (
-          <View style={styles.row}>
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Nombre de jugador"
-              placeholderTextColor="#666"
-              autoFocus
-            />
-            <TouchableOpacity style={styles.saveBtn} onPress={saveProfile}>
-              <Text style={styles.saveBtnText}>✓</Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* FIFA HERO SECTION */}
+        <View style={styles.heroSection}>
+          <View style={styles.avatarSection}>
+            <TouchableOpacity onPress={pickAndUploadAvatar} disabled={uploadingAvatar}>
+              {profile?.avatar_url ? (
+                <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={{ fontSize: 40 }}>👤</Text>
+                </View>
+              )}
+              {uploadingAvatar && (
+                <View style={styles.avatarOverlay}>
+                  <ActivityIndicator color={theme.colors.white} />
+                </View>
+              )}
             </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            onPress={() => { setDisplayName(profile?.display_name ?? ''); setEditing(true); }}
-          >
-            <Text style={styles.name}>{profile?.display_name}</Text>
-            <Text style={styles.editHint}>Toca para editar ✏️</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.email}>{profile?.email}</Text>
-      </View>
 
-      <View style={styles.statsCard}>
-        <Text style={styles.statsEyebrow}>MIS STATS</Text>
-        <View style={styles.statsGrid}>
-          <StatTile label="Partidos" value={playerStats?.matches_played ?? 0} color="#d1d5db" />
-          <StatTile label="Victorias" value={playerStats?.wins ?? 0} color="#22c55e" />
-          <StatTile label="Derrotas" value={playerStats?.losses ?? 0} color="#ef4444" />
-          <StatTile label="Empates" value={playerStats?.draws ?? 0} color="#f59e0b" />
-          <StatTile label="Goles" value={playerStats?.goals ?? 0} color="#fbbf24" />
-          <StatTile label="Asistencias" value={playerStats?.assists ?? 0} color="#60a5fa" />
-        </View>
-
-        <ProgressRow label="% victorias como jugador" value={playerWinRate} />
-
-        <Text style={styles.playerElo}>
-          ⚡ ELO: {(playerStats?.elo ?? 0).toLocaleString('es-CL')}
-        </Text>
-        <Text style={styles.eloHint}>Ranking personal basado en tus resultados</Text>
-        {(playerStats?.win_streak ?? 0) > 0 ? (
-          <Text style={styles.streakText}>
-            🔥 Racha de {playerStats?.win_streak.toLocaleString('es-CL')} victorias
-          </Text>
-        ) : null}
-      </View>
-
-      <View style={styles.teamStatsCard}>
-        <View style={styles.teamStatsHeader}>
-          <Text style={styles.sectionTitle}>Mi equipo</Text>
-          {teamRankingPosition > 0 ? (
-            <Text style={styles.rankBadge}>#{teamRankingPosition.toLocaleString('es-CL')}</Text>
-          ) : null}
-        </View>
-        <View style={styles.teamStatsRow}>
-          <StatTile label="Ganados" value={teamStats?.wins ?? 0} color="#22c55e" />
-          <StatTile label="Perdidos" value={teamStats?.losses ?? 0} color="#ef4444" />
-          <StatTile label="Empates" value={teamStats?.draws ?? 0} color="#f59e0b" />
-        </View>
-        <ProgressRow label="Win rate del equipo" value={teamWinRate} />
-      </View>
-
-      <View style={styles.teamStatsCard}>
-        <Text style={styles.sectionTitle}>Forma reciente</Text>
-        <View style={styles.formDots}>
-          {form.length > 0 ? (
-            form.map((result, index) => <FormDot key={`${result}-${index}`} result={result} />)
-          ) : (
-            <Text style={styles.eloHint}>Sin partidos registrados aun</Text>
-          )}
-        </View>
-        <Text style={styles.formHint}>Ultimos 5 partidos</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Habilidades</Text>
-        {SKILLS.map(({ key, label, emoji }) => (
-          <View key={key} style={styles.skillRow}>
-            <Text style={styles.skillLabel}>{emoji} {label}</Text>
-            <View style={styles.skillBarBg}>
-              <View style={[styles.skillBarFill, { width: `${skills[key]}%` }]} />
+            <View style={styles.nameSection}>
+              {editing ? (
+                <View style={styles.row}>
+                  <TextInput
+                    style={styles.input}
+                    value={displayName}
+                    onChangeText={setDisplayName}
+                    placeholder="Nombre"
+                    placeholderTextColor={theme.colors.gray}
+                    autoFocus
+                  />
+                  <TouchableOpacity style={styles.saveBtn} onPress={saveProfile}>
+                    <Text style={styles.saveBtnText}>✓</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => { setDisplayName(profile?.display_name ?? ''); setEditing(true); }}
+                  style={{alignItems: 'center'}}
+                >
+                  <Text style={styles.name}>{profile?.display_name}</Text>
+                  <Text style={styles.editHint}>Editar perfil ✏️</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <Text style={styles.skillValue}>{skills[key]}</Text>
           </View>
-        ))}
-        <Text style={styles.skillNote}>
-          * Las habilidades suben con la actividad en partidos
-        </Text>
-      </View>
 
-      <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
-        <Text style={styles.logoutText}>Cerrar sesión</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
-}
+          <View style={styles.heroStats}>
+            <View style={styles.statsGrid}>
+              <StatCard label="Partidos" value={playerStats?.matches_played ?? 0} />
+              <StatCard label="Goles" value={playerStats?.goals ?? 0} color={theme.colors.gold} />
+              <StatCard label="Asistencias" value={playerStats?.assists ?? 0} color={theme.colors.blue} />
+            </View>
 
-function StatTile({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <View style={styles.statTile}>
-      <Text style={[styles.statTileValue, { color }]}>{value.toLocaleString('es-CL')}</Text>
-      <Text style={styles.statTileLabel}>{label}</Text>
+            <View style={styles.eloContainer}>
+               <Text style={styles.playerElo}>
+                ELO: {(playerStats?.elo ?? 0).toLocaleString('es-CL')}
+              </Text>
+              {(playerStats?.win_streak ?? 0) > 0 ? (
+                <Text style={styles.streakText}>
+                  🔥 {playerStats?.win_streak} SEGUIDOS
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        </View>
+
+        <View style={{ padding: 24 }}>
+          <SectionHeader title="Estadísticas de Equipo" />
+          <View style={styles.teamStatsCard}>
+            <View style={styles.teamStatsHeader}>
+              <Text style={styles.teamNameLabel}>MI EQUIPO ACTUAL</Text>
+              {teamRankingPosition > 0 ? (
+                <Text style={styles.rankBadge}>#{teamRankingPosition}</Text>
+              ) : null}
+            </View>
+            <View style={styles.teamStatsRow}>
+              <StatCard label="Ganados" value={teamStats?.wins ?? 0} color={theme.colors.win} />
+              <StatCard label="Perdidos" value={teamStats?.losses ?? 0} color={theme.colors.loss} />
+              <StatCard label="Empates" value={teamStats?.draws ?? 0} color={theme.colors.draw} />
+            </View>
+            <ProgressRow label="Win rate del equipo" value={teamWinRate} />
+
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>FORMA RECIENTE</Text>
+              <View style={styles.formDots}>
+                {form.length > 0 ? (
+                  form.map((result, index) => <ResultBadge key={`${result}-${index}`} result={result} />)
+                ) : (
+                  <Text style={styles.emptyHint}>Sin partidos</Text>
+                )}
+              </View>
+            </View>
+          </View>
+
+          <SectionHeader title="Habilidades" />
+          <View style={styles.skillsCard}>
+            {SKILLS.map(({ key, label, emoji }) => (
+              <View key={key} style={styles.skillRow}>
+                <Text style={styles.skillLabel}>{emoji} {label}</Text>
+                <View style={styles.skillBarBg}>
+                  <View style={[styles.skillBarFill, { width: `${skills[key]}%` }]} />
+                </View>
+                <Text style={styles.skillValue}>{skills[key]}</Text>
+              </View>
+            ))}
+            <Text style={styles.skillNote}>
+              * Las habilidades suben con tu desempeño en partidos
+            </Text>
+          </View>
+
+          <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
+            <Text style={styles.logoutText}>Cerrar sesión</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -242,7 +247,7 @@ function ProgressRow({ label, value }: { label: string; value: number }) {
     <View style={styles.progressWrap}>
       <View style={styles.progressLabelRow}>
         <Text style={styles.progressLabel}>{label}</Text>
-        <Text style={styles.progressValue}>{value.toLocaleString('es-CL')}%</Text>
+        <Text style={styles.progressValue}>{value}%</Text>
       </View>
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width }]} />
@@ -251,116 +256,92 @@ function ProgressRow({ label, value }: { label: string; value: number }) {
   );
 }
 
-function FormDot({ result }: { result: 'win' | 'draw' | 'loss' }) {
-  const meta = {
-    win: { label: 'G', backgroundColor: '#dcfce7', color: '#16a34a' },
-    draw: { label: 'E', backgroundColor: '#fef3c7', color: '#d97706' },
-    loss: { label: 'P', backgroundColor: '#fee2e2', color: '#dc2626' },
-  }[result];
-
-  return (
-    <View style={[styles.formDot, { backgroundColor: meta.backgroundColor }]}>
-      <Text style={[styles.formDotText, { color: meta.color }]}>{meta.label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117' },
-  avatarSection: { alignItems: 'center', marginBottom: 24 },
-  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: '#22c55e' },
+  container: { flex: 1, backgroundColor: theme.colors.white },
+  heroSection: {
+    backgroundColor: theme.colors.primaryDark,
+    paddingTop: 20,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  avatarSection: { alignItems: 'center', marginBottom: 20 },
+  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: theme.colors.primary },
   avatarPlaceholder: {
     width: 100, height: 100, borderRadius: 50,
-    backgroundColor: '#1a1d27', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: '#2a2d3a'
+    backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.2)'
   },
   avatarOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 50,
     alignItems: 'center', justifyContent: 'center'
   },
-  changePhoto: { color: '#22c55e', marginTop: 8, fontSize: 13 },
-  section: { marginBottom: 28 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  editHint: { color: '#666', fontSize: 12, marginTop: 2 },
-  email: { color: '#888', fontSize: 14, marginTop: 4 },
+  nameSection: { marginTop: 12, alignItems: 'center', width: '100%' },
+  name: { fontSize: 28, fontFamily: theme.fonts.bebas, color: theme.colors.white },
+  editHint: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2, fontFamily: theme.fonts.dmSansBold },
   input: {
-    backgroundColor: '#1a1d27', color: '#fff', borderRadius: 10,
-    padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#2a2d3a'
+    backgroundColor: 'rgba(255,255,255,0.1)', color: theme.colors.white, borderRadius: 10,
+    padding: 12, fontSize: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', width: '60%'
   },
   saveBtn: {
-    backgroundColor: '#22c55e', borderRadius: 10, padding: 12, alignItems: 'center', minWidth: 44
+    backgroundColor: theme.colors.primary, borderRadius: 10, padding: 12, alignItems: 'center', minWidth: 44, marginLeft: 8
   },
-  saveBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  sectionTitle: { color: '#888', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', marginBottom: 16 },
-  statsCard: {
-    backgroundColor: '#0a3d1f',
-    borderRadius: 16,
-    marginBottom: 28,
-    padding: 18,
-  },
-  statsEyebrow: {
-    color: '#f59e0b',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 2,
-    marginBottom: 12,
-  },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  statTile: { alignItems: 'center', paddingVertical: 10, width: '33.333%' },
-  statTileValue: { fontSize: 28, fontWeight: '900' },
-  statTileLabel: { color: '#9ca3af', fontSize: 11, fontWeight: '800', marginTop: 3 },
-  progressWrap: { marginTop: 14 },
-  progressLabelRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  progressLabel: { color: '#d1d5db', fontSize: 12, fontWeight: '700' },
-  progressValue: { color: '#22c55e', fontSize: 12, fontWeight: '900' },
-  progressTrack: {
-    backgroundColor: '#1a1d27',
-    borderRadius: 999,
-    height: 8,
-    marginTop: 7,
-    overflow: 'hidden',
-  },
-  progressFill: { backgroundColor: '#22c55e', height: 8 },
-  playerElo: { color: '#f59e0b', fontSize: 28, fontWeight: '900', marginTop: 16 },
-  eloHint: { color: '#9ca3af', fontSize: 12, marginTop: 4 },
-  streakText: { color: '#f59e0b', fontSize: 20, fontWeight: '900', marginTop: 12 },
+  saveBtnText: { color: theme.colors.white, fontSize: 18, fontFamily: theme.fonts.dmSansBold },
+  heroStats: { paddingHorizontal: 24 },
+  statsGrid: { flexDirection: 'row', justifyContent: 'space-around' },
+  eloContainer: { alignItems: 'center', marginTop: 16 },
+  playerElo: { color: theme.colors.gold, fontSize: 32, fontFamily: theme.fonts.bebas },
+  streakText: { color: theme.colors.primary, fontSize: 14, fontFamily: theme.fonts.dmSansBold, marginTop: 4, backgroundColor: '#dcfce7', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
   teamStatsCard: {
-    backgroundColor: '#1a1d27',
-    borderColor: '#2a2d3a',
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 28,
-    padding: 16,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.radius.lg,
+    padding: 20,
+    marginBottom: 24,
+    ...theme.shadow.sm,
   },
-  teamStatsHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  teamStatsRow: { flexDirection: 'row' },
+  teamStatsHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  teamNameLabel: { color: theme.colors.gray, fontSize: 11, fontFamily: theme.fonts.dmSansBold },
+  teamStatsRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
   rankBadge: {
-    backgroundColor: '#f59e0b22',
+    backgroundColor: '#fffbeb',
     borderRadius: 999,
-    color: '#f59e0b',
-    fontSize: 13,
-    fontWeight: '900',
+    color: theme.colors.gold,
+    fontSize: 12,
+    fontFamily: theme.fonts.dmSansBold,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  formDots: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  formDot: {
-    alignItems: 'center',
-    borderRadius: 16,
-    height: 32,
-    justifyContent: 'center',
-    width: 32,
+  formSection: { marginTop: 20 },
+  formLabel: { color: theme.colors.gray, fontSize: 11, fontFamily: theme.fonts.dmSansBold, marginBottom: 8 },
+  formDots: { flexDirection: 'row', gap: 8 },
+  emptyHint: { color: theme.colors.gray, fontSize: 12, fontFamily: theme.fonts.dmSans },
+  skillsCard: {
+     backgroundColor: theme.colors.white,
+    borderRadius: theme.radius.lg,
+    padding: 20,
+    marginBottom: 24,
+    ...theme.shadow.sm,
   },
-  formDotText: { fontSize: 13, fontWeight: '900' },
-  formHint: { color: '#888', fontSize: 12, marginTop: 10 },
   skillRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
-  skillLabel: { color: '#fff', fontSize: 14, width: 110 },
-  skillBarBg: { flex: 1, height: 6, backgroundColor: '#1a1d27', borderRadius: 3, overflow: 'hidden' },
-  skillBarFill: { height: '100%', backgroundColor: '#22c55e', borderRadius: 3 },
-  skillValue: { color: '#888', fontSize: 12, width: 30, textAlign: 'right' },
-  skillNote: { color: '#444', fontSize: 11, marginTop: 8, fontStyle: 'italic' },
-  logoutBtn: { borderWidth: 1, borderColor: '#ef4444', borderRadius: 12, padding: 14, alignItems: 'center' },
-  logoutText: { color: '#ef4444', fontWeight: '600' },
+  skillLabel: { color: theme.colors.dark, fontSize: 14, fontFamily: theme.fonts.dmSansBold, width: 100 },
+  skillBarBg: { flex: 1, height: 8, backgroundColor: theme.colors.gray100, borderRadius: 4, overflow: 'hidden' },
+  skillBarFill: { height: '100%', backgroundColor: theme.colors.primary, borderRadius: 4 },
+  skillValue: { color: theme.colors.gray, fontSize: 12, fontFamily: theme.fonts.bebas, width: 30, textAlign: 'right' },
+  skillNote: { color: theme.colors.gray, fontSize: 11, marginTop: 8, fontStyle: 'italic', fontFamily: theme.fonts.dmSans },
+  logoutBtn: { borderWidth: 1.5, borderColor: theme.colors.loss, borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 10 },
+  logoutText: { color: theme.colors.loss, fontFamily: theme.fonts.dmSansBold },
+  progressWrap: { marginTop: 10 },
+  progressLabelRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  progressLabel: { color: theme.colors.dark, fontSize: 12, fontFamily: theme.fonts.dmSansBold },
+  progressValue: { color: theme.colors.primary, fontSize: 12, fontFamily: theme.fonts.dmSansBold },
+  progressTrack: {
+    backgroundColor: theme.colors.gray100,
+    borderRadius: 999,
+    height: 8,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  progressFill: { backgroundColor: theme.colors.primary, height: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,3 +1,4 @@
+// ✅ REDISEÑADO con theme.ts
 import { useMemo, useState } from 'react'
 import type * as React from 'react'
 import {
@@ -10,10 +11,11 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, Stack } from 'expo-router'
 import { useMyActivityFeed, FeedEvent } from '@/hooks/useActivityFeed'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { theme } from '@/lib/theme'
 
 export default function FeedScreen() {
   const router = useRouter()
@@ -36,7 +38,7 @@ export default function FeedScreen() {
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color="#00C853" size="large" />
+        <ActivityIndicator color={theme.colors.primary} size="large" />
       </View>
     )
   }
@@ -55,8 +57,13 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{
+        title: 'INICIO',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerShown: true
+      }} />
       <View style={styles.topSection}>
-        <Text style={styles.header}>Actividad</Text>
         {teams.length > 1 && (
           <TeamFilter
             teams={teams}
@@ -84,7 +91,7 @@ export default function FeedScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={refetch}
-            tintColor="#00C853"
+            tintColor={theme.colors.primary}
           />
         }
         contentContainerStyle={styles.list}
@@ -154,27 +161,22 @@ const filterStyles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
+    backgroundColor: theme.colors.white,
+    borderWidth: 1.5,
+    borderColor: theme.colors.gray100,
   },
   chipActive: {
-    backgroundColor: '#00C853',
-    borderWidth: 1,
+    backgroundColor: theme.colors.primary,
     borderColor: 'transparent',
-    shadowColor: '#00C853',
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 4,
   },
   chipText: {
-    color: '#666',
+    color: theme.colors.gray,
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: theme.fonts.dmSansMedium,
   },
   chipTextActive: {
-    color: '#000',
-    fontWeight: '700',
+    color: theme.colors.white,
+    fontFamily: theme.fonts.dmSansBold,
   },
 })
 
@@ -225,12 +227,12 @@ function FeedCard({
 
 // ─── Configuración visual por tipo de evento ─────────────
 const EVENT_CONFIG: Record<string, { icon: string; bg: string }> = {
-  match_played:     { icon: '⚽', bg: '#0A2A15' },
-  streak_milestone: { icon: '🔥', bg: '#2A1A00' },
-  streak_broken:    { icon: '💔', bg: '#2A0A0A' },
-  player_joined:    { icon: '👋', bg: '#0A1A2A' },
-  match_created:    { icon: '📅', bg: '#1A0A2A' },
-  match_confirmed:  { icon: '✅', bg: '#0A2A15' },
+  match_played:     { icon: '⚽', bg: '#dcfce7' },
+  streak_milestone: { icon: '🔥', bg: '#fef3c7' },
+  streak_broken:    { icon: '💔', bg: '#fee2e2' },
+  player_joined:    { icon: '👋', bg: '#eff6ff' },
+  match_created:    { icon: '📅', bg: '#f3e8ff' },
+  match_confirmed:  { icon: '✅', bg: '#dcfce7' },
 }
 
 // ─── Construir texto del evento ───────────────────────────
@@ -270,7 +272,7 @@ function buildTitle(event: FeedEvent): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: theme.colors.white,
   },
   topSection: {
     flexShrink: 0,
@@ -282,17 +284,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0A0A0A',
+    backgroundColor: theme.colors.white,
     padding: 32,
     gap: 12,
-  },
-  header: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '800',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
   },
   list: {
     padding: 16,
@@ -300,7 +294,7 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   separator: {
-    height: 8,
+    height: 12,
   },
 
   // Empty state
@@ -308,13 +302,14 @@ const styles = StyleSheet.create({
     fontSize: 48,
   },
   emptyTitle: {
-    color: '#fff',
+    color: theme.colors.dark,
+    fontFamily: theme.fonts.dmSansBold,
     fontSize: 20,
-    fontWeight: '700',
     textAlign: 'center',
   },
   emptySubtitle: {
-    color: '#666',
+    color: theme.colors.gray,
+    fontFamily: theme.fonts.dmSans,
     fontSize: 15,
     textAlign: 'center',
     lineHeight: 22,
@@ -322,12 +317,13 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.radius.lg,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    ...theme.shadow.sm,
   },
   iconContainer: {
     width: 44,
@@ -345,9 +341,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   cardTitle: {
-    color: '#fff',
+    color: theme.colors.dark,
+    fontFamily: theme.fonts.dmSansBold,
     fontSize: 14,
-    fontWeight: '500',
     lineHeight: 20,
   },
   metaRow: {
@@ -356,16 +352,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   teamTag: {
-    color: '#00C853',
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.dmSansBold,
     fontSize: 12,
-    fontWeight: '600',
   },
   timeText: {
-    color: '#555',
+    color: theme.colors.gray,
+    fontFamily: theme.fonts.dmSans,
     fontSize: 12,
   },
   chevron: {
-    color: '#444',
+    color: theme.colors.gray100,
     fontSize: 22,
     fontWeight: '300',
   },

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, DimensionValue, StyleProp, ViewStyle } from 'react-native';
+import { theme } from '@/lib/theme';
 
 type SkeletonBoxProps = {
   width: DimensionValue;
@@ -8,7 +9,7 @@ type SkeletonBoxProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function SkeletonBox({ width, height, borderRadius = 12, style }: SkeletonBoxProps) {
+export function SkeletonBox({ width, height, borderRadius = theme.radius.md, style }: SkeletonBoxProps) {
   const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export function SkeletonBox({ width, height, borderRadius = 12, style }: Skeleto
           width,
           height,
           borderRadius,
-          backgroundColor: '#e5e7eb',
+          backgroundColor: theme.colors.gray100,
           opacity,
         },
         style,

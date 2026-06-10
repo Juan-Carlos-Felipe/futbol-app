@@ -1,3 +1,4 @@
+// ✅ REDISEÑADO con theme.ts
 import { useState, useEffect } from 'react';
 import {
   View,
@@ -7,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { getVenueById } from '@/lib/venues';
@@ -16,6 +17,8 @@ import {
   createSplitPayments,
   notifyReservationCreated,
 } from '@/lib/reservations';
+import { theme } from '@/lib/theme';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 export default function ConfirmReservationScreen() {
   const { venueId, slotId, date, startTime, endTime } = useLocalSearchParams<{
@@ -103,30 +106,48 @@ export default function ConfirmReservationScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Confirmar reserva</Text>
-        <View style={{ width: 32 }} />
-      </View>
+      <Stack.Screen options={{
+        title: 'RESERVA',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+        ),
+        headerShown: true
+      }} />
 
       <View style={styles.content}>
         {venue && (
           <>
+            <SectionHeader title="Confirmar Reserva" />
             <View style={styles.card}>
-              <Text style={styles.venueName}>{venue.name}</Text>
+              <Text style={styles.venueName}>{venue.name.toUpperCase()}</Text>
               <Text style={styles.venueAddress}>{venue.address}</Text>
-              <Text style={styles.dateText}>{date}</Text>
-              <Text style={styles.timeText}>{startTime} - {endTime}</Text>
-              <Text style={styles.priceText}>{formatPrice(venue.price_platform)}</Text>
+              <View style={styles.divider} />
+
+              <View style={styles.row}>
+                 <Ionicons name="calendar-outline" size={18} color={theme.colors.primary} />
+                 <Text style={styles.dateText}>{date}</Text>
+              </View>
+
+              <View style={[styles.row, { marginTop: 8 }]}>
+                 <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
+                 <Text style={styles.timeText}>{startTime} - {endTime}</Text>
+              </View>
+
+              <View style={styles.priceContainer}>
+                <Text style={styles.priceLabel}>TOTAL A PAGAR</Text>
+                <Text style={styles.priceText}>{formatPrice(venue.price_platform)}</Text>
+              </View>
             </View>
 
             <TouchableOpacity
@@ -136,12 +157,16 @@ export default function ConfirmReservationScreen() {
             >
               {isCreating ? (
                 <>
-                  <ActivityIndicator size="small" color="#ffffff" style={styles.spinner} />
-                  <Text style={styles.confirmButtonText}>Creando...</Text>
+                  <ActivityIndicator size="small" color={theme.colors.white} style={styles.spinner} />
+                  <Text style={styles.confirmButtonText}>PROCESANDO...</Text>
                 </>
               ) : (
-                <Text style={styles.confirmButtonText}>Crear reserva</Text>
+                <Text style={styles.confirmButtonText}>RESERVAR AHORA</Text>
               )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()}>
+               <Text style={styles.cancelBtnText}>Cancelar</Text>
             </TouchableOpacity>
           </>
         )}
@@ -153,78 +178,95 @@ export default function ConfirmReservationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    color: '#111827',
-    fontSize: 18,
-    fontWeight: '700',
+    backgroundColor: theme.colors.white,
   },
   content: {
-    padding: 16,
+    padding: 24,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    backgroundColor: theme.colors.white,
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 32,
+    ...theme.shadow.sm,
   },
   venueName: {
-    color: '#111827',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  venueAddress: {
-    color: '#6b7280',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  dateText: {
-    color: '#374151',
-    fontSize: 14,
+    color: theme.colors.dark,
+    fontSize: 22,
+    fontFamily: theme.fonts.bebas,
     marginBottom: 4,
   },
-  timeText: {
-    color: '#374151',
+  venueAddress: {
+    color: theme.colors.gray,
     fontSize: 14,
-    marginBottom: 12,
+    fontFamily: theme.fonts.dmSans,
+    marginBottom: 16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.gray100,
+    marginBottom: 16,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dateText: {
+    color: theme.colors.dark,
+    fontSize: 15,
+    fontFamily: theme.fonts.dmSansBold,
+  },
+  timeText: {
+    color: theme.colors.dark,
+    fontSize: 15,
+    fontFamily: theme.fonts.dmSansBold,
+  },
+  priceContainer: {
+    marginTop: 24,
+    backgroundColor: theme.colors.gray100,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  priceLabel: {
+    color: theme.colors.gray,
+    fontSize: 11,
+    fontFamily: theme.fonts.dmSansBold,
+    marginBottom: 4,
   },
   priceText: {
-    color: '#16a34a',
-    fontSize: 28,
-    fontWeight: '700',
+    color: theme.colors.primary,
+    fontSize: 32,
+    fontFamily: theme.fonts.bebas,
   },
   confirmButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
   },
   confirmButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   spinner: {
     marginRight: 8,
   },
   confirmButtonText: {
-    color: '#ffffff',
+    color: theme.colors.white,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: theme.fonts.dmSansBold,
+  },
+  cancelBtn: {
+    marginTop: 16,
+    padding: 12,
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    color: theme.colors.gray,
+    fontFamily: theme.fonts.dmSansBold,
+    fontSize: 14,
   },
 });

@@ -1,3 +1,4 @@
+// ✅ REDISEÑADO con theme.ts
 import { useState, useEffect } from 'react';
 import {
   View,
@@ -8,9 +9,11 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { theme } from '@/lib/theme';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 type PaymentMethod = 'card' | 'transfer' | 'mercadopago';
 
@@ -150,7 +153,7 @@ export default function PaymentScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#16a34a" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Cargando...</Text>
         </View>
       </View>
@@ -158,35 +161,44 @@ export default function PaymentScreen() {
   }
 
   const paymentMethods = [
-    { id: 'card' as PaymentMethod, label: '💳 Tarjeta de crédito/débito' },
-    { id: 'transfer' as PaymentMethod, label: '🏦 Transferencia bancaria' },
-    { id: 'mercadopago' as PaymentMethod, label: '📱 Mercado Pago (app)' },
+    { id: 'card' as PaymentMethod, label: '💳 Tarjeta de crédito/débito', icon: 'card-outline' },
+    { id: 'transfer' as PaymentMethod, label: '🏦 Transferencia bancaria', icon: 'business-outline' },
+    { id: 'mercadopago' as PaymentMethod, label: '📱 Mercado Pago (app)', icon: 'phone-portrait-outline' },
   ];
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
-          <Ionicons name="close" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Confirmar pago</Text>
-        <View style={{ width: 32 }} />
-      </View>
+      <Stack.Screen options={{
+        title: 'CONFIRMAR PAGO',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerLeft: () => (
+          <TouchableOpacity onPress={handleCancel} style={{ marginLeft: 16 }}>
+            <Ionicons name="close" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+        ),
+        headerShown: true
+      }} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {paymentData && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Cancha: {paymentData.venueName}</Text>
-            <Text style={styles.cardAmount}>{formatPrice(paymentData.amount)}</Text>
-            <Text style={styles.cardSplit}>Split entre {paymentData.splitCount} jugadores</Text>
-            <View style={styles.cardExpiresRow}>
-              <Ionicons name="time-outline" size={14} color="#6b7280" style={styles.expiresIcon} />
-              <Text style={styles.cardExpires}>Vence en 24 horas</Text>
+          <>
+            <SectionHeader title="Detalles del Pago" />
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>PAGO POR CANCHA</Text>
+              <Text style={styles.cardTitle}>{paymentData.venueName.toUpperCase()}</Text>
+              <View style={styles.divider} />
+              <Text style={styles.cardAmount}>{formatPrice(paymentData.amount)}</Text>
+              <Text style={styles.cardSplit}>Dividido entre {paymentData.splitCount} jugadores</Text>
+              <View style={styles.cardExpiresRow}>
+                <Ionicons name="time-outline" size={14} color={theme.colors.gray} style={styles.expiresIcon} />
+                <Text style={styles.cardExpires}>Vence en 24 horas</Text>
+              </View>
             </View>
-          </View>
+          </>
         )}
 
-        <Text style={styles.sectionTitle}>Seleccioná tu método de pago</Text>
+        <SectionHeader title="Método de Pago" />
 
         {paymentMethods.map((method) => (
           <TouchableOpacity
@@ -197,15 +209,18 @@ export default function PaymentScreen() {
             ]}
             onPress={() => setSelectedMethod(method.id)}
           >
-            {selectedMethod === method.id ? (
-              <Ionicons name="checkmark-circle" size={24} color="#16a34a" />
-            ) : null}
+             <View style={[styles.methodIconContainer, selectedMethod === method.id && { backgroundColor: '#dcfce7' }]}>
+                <Ionicons name={method.icon as any} size={20} color={selectedMethod === method.id ? theme.colors.primary : theme.colors.gray} />
+             </View>
             <Text style={[
               styles.methodLabel,
               selectedMethod === method.id ? styles.methodLabelSelected : null,
             ]}>
               {method.label}
             </Text>
+            {selectedMethod === method.id && (
+               <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
+            )}
           </TouchableOpacity>
         ))}
 
@@ -219,16 +234,16 @@ export default function PaymentScreen() {
         >
           {isPaying ? (
             <>
-              <ActivityIndicator size="small" color="#ffffff" style={styles.paySpinner} />
-              <Text style={styles.payButtonText}>Procesando...</Text>
+              <ActivityIndicator size="small" color={theme.colors.white} style={styles.paySpinner} />
+              <Text style={styles.payButtonText}>PROCESANDO...</Text>
             </>
           ) : paymentData ? (
-            <Text style={styles.payButtonText}>Pagar {formatPrice(paymentData.amount)}</Text>
+            <Text style={styles.payButtonText}>PAGAR {formatPrice(paymentData.amount)}</Text>
           ) : null}
         </TouchableOpacity>
 
         <Text style={styles.simulationNote}>
-          ⚠️ Modo simulación — los pagos no son reales
+           Modo simulación — los pagos no son reales
         </Text>
       </ScrollView>
     </View>
@@ -238,7 +253,7 @@ export default function PaymentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: theme.colors.white,
   },
   loadingContainer: {
     flex: 1,
@@ -247,56 +262,46 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    color: '#6b7280',
+    color: theme.colors.gray,
+    fontFamily: theme.fonts.dmSans,
     fontSize: 16,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    color: '#111827',
-    fontSize: 18,
-    fontWeight: '700',
-  },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 32,
+    padding: 24,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
+    backgroundColor: theme.colors.white,
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 32,
+    ...theme.shadow.sm,
   },
-  cardTitle: {
-    color: '#6b7280',
-    fontSize: 14,
+  cardLabel: {
+    color: theme.colors.gray,
+    fontSize: 11,
+    fontFamily: theme.fonts.dmSansBold,
     marginBottom: 4,
   },
+  cardTitle: {
+    color: theme.colors.dark,
+    fontSize: 20,
+    fontFamily: theme.fonts.bebas,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.gray100,
+    marginVertical: 16,
+  },
   cardAmount: {
-    color: '#16a34a',
-    fontSize: 28,
-    fontWeight: '700',
+    color: theme.colors.primary,
+    fontSize: 32,
+    fontFamily: theme.fonts.bebas,
     marginBottom: 4,
   },
   cardSplit: {
-    color: '#374151',
+    color: theme.colors.gray,
     fontSize: 14,
+    fontFamily: theme.fonts.dmSans,
     marginBottom: 8,
   },
   cardExpiresRow: {
@@ -308,62 +313,67 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cardExpires: {
-    color: '#6b7280',
+    color: theme.colors.loss,
     fontSize: 12,
-  },
-  sectionTitle: {
-    color: '#111827',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
+    fontFamily: theme.fonts.dmSansBold,
   },
   methodCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
+    backgroundColor: theme.colors.white,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: theme.colors.gray100,
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   methodCardSelected: {
-    borderColor: '#16a34a',
+    borderColor: theme.colors.primary,
+    backgroundColor: '#f0fdf4',
+  },
+  methodIconContainer: {
+     width: 40,
+     height: 40,
+     borderRadius: 10,
+     backgroundColor: theme.colors.gray100,
+     alignItems: 'center',
+     justifyContent: 'center',
   },
   methodLabel: {
-    color: '#111827',
+    color: theme.colors.gray,
     fontSize: 15,
     flex: 1,
+    fontFamily: theme.fonts.dmSansBold,
   },
   methodLabelSelected: {
-    color: '#16a34a',
-    fontWeight: '600',
+    color: theme.colors.dark,
   },
   payButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     marginTop: 20,
     flexDirection: 'row',
     justifyContent: 'center',
   },
   payButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   paySpinner: {
     marginRight: 8,
   },
   payButtonText: {
-    color: '#ffffff',
+    color: theme.colors.white,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: theme.fonts.dmSansBold,
   },
   simulationNote: {
-    color: '#9ca3af',
+    color: theme.colors.gray,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 24,
+    fontFamily: theme.fonts.dmSans,
   },
 });

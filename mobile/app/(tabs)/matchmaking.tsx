@@ -1,6 +1,7 @@
+// ✅ REDISEÑADO con theme.ts
 import { useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useRouter, Stack } from 'expo-router';
 import {
   Alert,
   FlatList,
@@ -17,6 +18,7 @@ import { MatchRequestSkeleton } from '@/components/matchmaking/MatchRequestSkele
 import { useMatchRequests, useMyTeamRequests } from '@/hooks/useMatchmaking';
 import type { MatchRequest, MatchRequestFilters } from '@/lib/matchmaking';
 import { supabase } from '@/lib/supabase';
+import { theme } from '@/lib/theme';
 
 type BoardMode = 'search' | 'mine';
 
@@ -106,7 +108,7 @@ export default function MatchmakingScreen() {
     if (isError) {
       return (
         <View style={styles.centered}>
-          <Ionicons name="wifi-outline" size={48} color="#9ca3af" />
+          <Ionicons name="wifi-outline" size={48} color={theme.colors.gray100} />
           <Text style={styles.emptyTitle}>Error al cargar anuncios</Text>
           <TouchableOpacity style={styles.primaryButton} onPress={() => refetch()}>
             <Text style={styles.primaryButtonText}>Reintentar</Text>
@@ -129,7 +131,7 @@ export default function MatchmakingScreen() {
     if (visibleRequests.length === 0) {
       return (
         <View style={styles.centered}>
-          <Ionicons name="shield-outline" size={52} color="#9ca3af" />
+          <Ionicons name="shield-outline" size={52} color={theme.colors.gray100} />
           <Text style={styles.emptyTitle}>No hay equipos buscando rival</Text>
           <Text style={styles.emptySubtitle}>
             Publica un anuncio para que otros equipos puedan encontrarte.
@@ -177,7 +179,7 @@ export default function MatchmakingScreen() {
               Alert.alert('Respuestas', 'Abre el detalle del anuncio para revisar propuestas.')
             }
           >
-            <Text style={styles.responsesButtonText}>Ver respuestas -&gt;</Text>
+            <Text style={styles.responsesButtonText}>Ver respuestas</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -199,7 +201,7 @@ export default function MatchmakingScreen() {
     if (myRequests.length === 0) {
       return (
         <View style={styles.centered}>
-          <Ionicons name="megaphone-outline" size={52} color="#9ca3af" />
+          <Ionicons name="megaphone-outline" size={52} color={theme.colors.gray100} />
           <Text style={styles.emptyTitle}>Todavia no tienes anuncios</Text>
           <TouchableOpacity style={styles.primaryButton} onPress={openCreateModal}>
             <Text style={styles.primaryButtonText}>Crear nuevo anuncio</Text>
@@ -220,47 +222,40 @@ export default function MatchmakingScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>TABLON DE RIVALES</Text>
-            <Text style={styles.headerSubtitle}>Encontra equipos para jugar</Text>
-          </View>
-          <View style={styles.modeToggle}>
-            <TouchableOpacity
-              style={[styles.modeButton, mode === 'search' && styles.modeButtonActive]}
-              onPress={() => setMode('search')}
-            >
-              <Text style={[styles.modeText, mode === 'search' && styles.modeTextActive]}>
-                Buscar
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modeButton, mode === 'mine' && styles.modeButtonActive]}
-              onPress={() => setMode('mine')}
-            >
-              <Text style={[styles.modeText, mode === 'mine' && styles.modeTextActive]}>
-                Mis anuncios
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity
-            style={styles.rankingButton}
-            onPress={() => router.push('/ranking' as Href)}
-          >
-            <Ionicons name="trophy-outline" size={22} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
+      <Stack.Screen options={{
+        title: 'TABLON DE RIVALES',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerShown: true
+      }} />
+
+      <View style={styles.modeTabs}>
+        <TouchableOpacity
+          style={[styles.modeTab, mode === 'search' && styles.modeTabActive]}
+          onPress={() => setMode('search')}
+        >
+          <Text style={[styles.modeTabText, mode === 'search' && styles.modeTabTextActive]}>
+            Buscar Rival
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.modeTab, mode === 'mine' && styles.modeTabActive]}
+          onPress={() => setMode('mine')}
+        >
+          <Text style={[styles.modeTabText, mode === 'mine' && styles.modeTabTextActive]}>
+            Mis Anuncios
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {mode === 'search' ? (
         <View style={styles.searchTools}>
           <View style={styles.searchInputWrap}>
-            <Ionicons name="search-outline" size={18} color="#6b7280" />
+            <Ionicons name="search-outline" size={18} color={theme.colors.gray} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Buscar por nivel, zona o tamano..."
-              placeholderTextColor="#9ca3af"
+              placeholder="Nivel, zona o tamaño..."
+              placeholderTextColor={theme.colors.gray}
               value={query}
               onChangeText={setQuery}
             />
@@ -299,10 +294,6 @@ export default function MatchmakingScreen() {
               );
             })}
           </ScrollView>
-
-          <Text style={styles.counterText}>
-            {visibleRequests.length.toLocaleString('es-CL')} equipos buscan rival
-          </Text>
         </View>
       ) : null}
 
@@ -311,7 +302,7 @@ export default function MatchmakingScreen() {
       </View>
 
       <TouchableOpacity style={styles.fab} onPress={openCreateModal}>
-        <Text style={styles.fabText}>+</Text>
+        <Ionicons name="add" size={32} color={theme.colors.white} />
       </TouchableOpacity>
 
       {activeTeamId ? (
@@ -326,72 +317,63 @@ export default function MatchmakingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: '#f3f4f6', flex: 1 },
-  header: {
-    backgroundColor: '#0a3d1f',
-    paddingBottom: 18,
+  container: { backgroundColor: theme.colors.white, flex: 1 },
+  modeTabs: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.primaryDark,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingBottom: 12,
   },
-  headerTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between',
+  modeTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
   },
-  headerText: { flex: 1 },
-  headerTitle: {
-    color: '#ffffff',
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: 0,
+  modeTabActive: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  headerSubtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
-  modeToggle: {
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderRadius: 999,
-    flexDirection: 'row',
-    padding: 4,
+  modeTabText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: theme.fonts.dmSansBold,
+    fontSize: 14,
   },
-  rankingButton: {
-    alignItems: 'center',
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
+  modeTabTextActive: {
+    color: theme.colors.white,
   },
-  modeButton: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7 },
-  modeButtonActive: { backgroundColor: '#ffffff' },
-  modeText: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '800' },
-  modeTextActive: { color: '#0a3d1f' },
   searchTools: {
-    backgroundColor: '#ffffff',
-    borderBottomColor: '#e5e7eb',
-    borderBottomWidth: 1,
+    backgroundColor: theme.colors.white,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    ...theme.shadow.sm,
   },
   searchInputWrap: {
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.colors.gray100,
     borderRadius: 14,
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 12,
   },
-  searchInput: { color: '#111827', flex: 1, fontSize: 14, paddingVertical: 11 },
+  searchInput: {
+    color: theme.colors.dark,
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 11,
+    fontFamily: theme.fonts.dmSans,
+  },
   filtersContent: { flexDirection: 'row', gap: 8, paddingTop: 12 },
   chip: {
-    backgroundColor: '#f3f4f6',
-    borderColor: '#e5e7eb',
+    backgroundColor: theme.colors.white,
+    borderColor: theme.colors.gray100,
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 1.5,
     paddingHorizontal: 13,
     paddingVertical: 7,
   },
-  chipActive: { backgroundColor: '#16a34a', borderColor: '#16a34a' },
-  chipText: { color: '#6b7280', fontSize: 13, fontWeight: '700' },
-  chipTextActive: { color: '#ffffff' },
-  counterText: { color: '#6b7280', fontSize: 13, fontWeight: '700', marginTop: 12 },
+  chipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  chipText: { color: theme.colors.gray, fontSize: 13, fontFamily: theme.fonts.dmSansBold },
+  chipTextActive: { color: theme.colors.white },
   content: { flex: 1 },
   listContent: { flexGrow: 1, padding: 16, paddingBottom: 96 },
   centered: {
@@ -401,37 +383,34 @@ const styles = StyleSheet.create({
     padding: 28,
   },
   emptyTitle: {
-    color: '#111827',
+    color: theme.colors.dark,
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: theme.fonts.dmSansBold,
     marginTop: 12,
     textAlign: 'center',
   },
   emptySubtitle: {
-    color: '#6b7280',
+    color: theme.colors.gray,
     fontSize: 14,
     lineHeight: 20,
     marginTop: 6,
     textAlign: 'center',
+    fontFamily: theme.fonts.dmSans,
   },
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     marginTop: 16,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
-  primaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '800' },
+  primaryButtonText: { color: theme.colors.white, fontSize: 14, fontFamily: theme.fonts.dmSansBold },
   myCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 3,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.radius.lg,
     marginBottom: 12,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    padding: 16,
+    ...theme.shadow.sm,
   },
   myCardHeader: {
     alignItems: 'flex-start',
@@ -440,34 +419,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   myCardText: { flex: 1 },
-  myCardTitle: { color: '#111827', fontSize: 16, fontWeight: '800' },
-  myCardDescription: { color: '#6b7280', fontSize: 13, lineHeight: 18, marginTop: 5 },
+  myCardTitle: { color: theme.colors.dark, fontSize: 16, fontFamily: theme.fonts.dmSansBold },
+  myCardDescription: { color: theme.colors.gray, fontSize: 13, lineHeight: 18, marginTop: 5, fontFamily: theme.fonts.dmSans },
   statusBadge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  statusText: { fontSize: 11, fontWeight: '800' },
+  statusText: { fontSize: 11, fontFamily: theme.fonts.dmSansBold },
   responsesButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.colors.blueBg,
     borderRadius: 8,
     marginTop: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  responsesButtonText: { color: '#2563eb', fontSize: 13, fontWeight: '800' },
+  responsesButtonText: { color: theme.colors.blue, fontSize: 13, fontFamily: theme.fonts.dmSansBold },
   fab: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 28,
     bottom: 24,
-    elevation: 5,
     height: 56,
     justifyContent: 'center',
     position: 'absolute',
     right: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
+    ...theme.shadow.sm,
+    shadowOpacity: 0.3,
     width: 56,
   },
-  fabText: { color: '#ffffff', fontSize: 34, fontWeight: '600', lineHeight: 38 },
 });

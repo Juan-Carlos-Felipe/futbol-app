@@ -1,8 +1,9 @@
+// ✅ REDISEÑADO con theme.ts
 import { useEffect, useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import {
   ActivityIndicator,
   ImageBackground,
@@ -21,11 +22,16 @@ import {
 } from '@/hooks/useMatchmaking';
 import type { TeamMatchHistoryItem, TeamStats } from '@/lib/matchmaking';
 import { supabase } from '@/lib/supabase';
+import { theme } from '@/lib/theme';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { ResultBadge } from '@/components/ui/ResultBadge';
+import { PlayerCard } from '@/components/ui/PlayerCard';
 
 const RESULT_META = {
-  win: { label: 'G', color: '#16a34a', backgroundColor: '#dcfce7' },
-  draw: { label: 'E', color: '#ca8a04', backgroundColor: '#fef3c7' },
-  loss: { label: 'P', color: '#dc2626', backgroundColor: '#fee2e2' },
+  win: { label: 'G', color: theme.colors.win, backgroundColor: '#dcfce7' },
+  draw: { label: 'E', color: theme.colors.draw, backgroundColor: '#fef3c7' },
+  loss: { label: 'P', color: theme.colors.loss, backgroundColor: '#fee2e2' },
 };
 
 function getInitial(name: string) {
@@ -121,7 +127,7 @@ export default function TeamPublicProfileScreen() {
   if (isLoading) {
     return (
       <View style={styles.centeredScreen}>
-        <ActivityIndicator color="#16a34a" size="large" />
+        <ActivityIndicator color={theme.colors.primary} size="large" />
       </View>
     );
   }
@@ -129,7 +135,7 @@ export default function TeamPublicProfileScreen() {
   if (!profile || !normalizedTeamId) {
     return (
       <View style={styles.centeredScreen}>
-        <Ionicons name="lock-closed-outline" size={52} color="#9ca3af" />
+        <Ionicons name="lock-closed-outline" size={52} color={theme.colors.gray100} />
         <Text style={styles.emptyTitle}>Perfil no disponible</Text>
         <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
           <Text style={styles.primaryButtonText}>Volver</Text>
@@ -145,6 +151,18 @@ export default function TeamPublicProfileScreen() {
 
   return (
     <View style={styles.screen}>
+       <Stack.Screen options={{
+        title: 'PERFIL DE EQUIPO',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+        ),
+        headerShown: true
+      }} />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
           {publicProfile?.banner_url ? (
@@ -152,32 +170,34 @@ export default function TeamPublicProfileScreen() {
               <View style={styles.heroOverlay} />
             </ImageBackground>
           ) : null}
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={26} color="#ffffff" />
-          </TouchableOpacity>
 
           <View style={styles.heroContent}>
             <View style={styles.logo}>
               <Text style={styles.logoText}>{getInitial(profile.name)}</Text>
             </View>
-            <Text style={styles.teamName}>{profile.name}</Text>
-            {publicProfile?.home_zone ? (
-              <Text style={styles.heroMuted}>{publicProfile.home_zone}</Text>
-            ) : null}
-            {publicProfile?.founded_year ? (
-              <Text style={styles.heroSubtle}>
-                Fundado en {publicProfile.founded_year.toLocaleString('es-CL')}
-              </Text>
-            ) : null}
+            <Text style={styles.teamName}>{profile.name.toUpperCase()}</Text>
+
             <View style={styles.eloBadge}>
-              <Text style={styles.eloBadgeText}>⚡ {stats.elo.toLocaleString('es-CL')} ELO</Text>
+              <Text style={styles.eloBadgeText}>ELO: {stats.elo}</Text>
             </View>
+
+            {publicProfile?.home_zone || publicProfile?.founded_year || instagram ? (
+              <View style={styles.heroMetaRow}>
+                {publicProfile?.home_zone && (
+                   <Text style={styles.heroMuted}>{publicProfile.home_zone.toUpperCase()}</Text>
+                )}
+                {publicProfile?.founded_year && (
+                   <Text style={styles.heroMuted}> • DESDE {publicProfile.founded_year}</Text>
+                )}
+              </View>
+            ) : null}
+
             {instagram ? (
               <TouchableOpacity
                 style={styles.instagramHero}
                 onPress={() => Linking.openURL(instagram.url)}
               >
-                <Ionicons name="logo-instagram" size={16} color="#ffffff" />
+                <Ionicons name="logo-instagram" size={16} color={theme.colors.white} />
                 <Text style={styles.instagramHeroText}>@{instagram.handle}</Text>
               </TouchableOpacity>
             ) : null}
@@ -186,96 +206,76 @@ export default function TeamPublicProfileScreen() {
 
         <View style={styles.statsCard}>
           <View style={styles.statsGrid}>
-            <StatCell label="Partidos jugados" value={stats.matches_played} color="#111827" />
-            <StatCell label="Victorias" value={stats.wins} color="#16a34a" bordered />
-            <StatCell label="Derrotas" value={stats.losses} color="#dc2626" bordered />
-            <StatCell label="Empates" value={stats.draws} color="#ca8a04" />
-            <StatCell label="Goles a favor" value={stats.goals_for} color="#16a34a" bordered />
-            <StatCell
-              label="Goles en contra"
-              value={stats.goals_against}
-              color="#dc2626"
-              bordered
-            />
+            <StatCard label="Jugados" value={stats.matches_played} color={theme.colors.dark} />
+            <StatCard label="Victorias" value={stats.wins} color={theme.colors.win} />
+            <StatCard label="Derrotas" value={stats.losses} color={theme.colors.loss} />
           </View>
 
-          {form.length > 0 ? (
-            <View style={styles.formRow}>
-              <Text style={styles.formLabel}>Forma reciente:</Text>
-              {form.map((result, index) => {
-                const meta = RESULT_META[result];
+          <View style={styles.formSection}>
+             <Text style={styles.formLabel}>FORMA RECIENTE</Text>
+             <View style={styles.formRow}>
+              {form.length > 0 ? (
+                form.map((result, index) => <ResultBadge key={`${result}-${index}`} result={result} />)
+              ) : (
+                <Text style={styles.emptyHint}>Sin partidos</Text>
+              )}
+             </View>
+          </View>
+        </View>
+
+        <View style={{paddingHorizontal: 16}}>
+          {publicProfile?.bio ? (
+            <View style={styles.section}>
+              <SectionHeader title="Sobre Nosotros" />
+              <Text style={styles.bio}>{publicProfile.bio}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.chipsWrap}>
+            {[publicProfile?.preferred_size, publicProfile?.preferred_surface]
+              .filter((value): value is string => Boolean(value))
+              .map((value) => (
+                <View key={value} style={styles.preferenceChip}>
+                  <Text style={styles.preferenceChipText}>{value.toUpperCase()}</Text>
+                </View>
+              ))}
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <SectionHeader title="Plantilla" />
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>{members.length} JUGADORES</Text>
+              </View>
+            </View>
+            <View style={styles.membersList}>
+              {members.map((member) => {
+                const isCaptain = member.role === 'captain' || member.user_id === captainId;
                 return (
-                  <View
-                    key={`${result}-${index}`}
-                    style={[styles.formDot, { backgroundColor: meta.backgroundColor }]}
-                  >
-                    <Text style={[styles.formDotText, { color: meta.color }]}>{meta.label}</Text>
+                  <View key={member.id} style={styles.memberItem}>
+                    <PlayerCard
+                      name={member.display_name}
+                      subtitle={`${member.matches_played} pj • ELO ${member.elo}${isCaptain ? ' • CAPITÁN' : ''}`}
+                    />
                   </View>
                 );
               })}
             </View>
-          ) : null}
-        </View>
-
-        {publicProfile?.bio ? (
-          <Section>
-            <Text style={styles.sectionTitle}>Sobre nosotros</Text>
-            <Text style={styles.bio}>{publicProfile.bio}</Text>
-          </Section>
-        ) : null}
-
-        <View style={styles.chipsWrap}>
-          {[publicProfile?.preferred_size, publicProfile?.preferred_surface, publicProfile?.home_zone]
-            .filter((value): value is string => Boolean(value))
-            .map((value) => (
-              <View key={value} style={styles.preferenceChip}>
-                <Text style={styles.preferenceChipText}>{value}</Text>
-              </View>
-            ))}
-        </View>
-
-        <Section>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Jugadores</Text>
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>
-                {members.length.toLocaleString('es-CL')} jugadores
-              </Text>
-            </View>
           </View>
-          {members.map((member) => {
-            const isCaptain = member.role === 'captain' || member.user_id === captainId;
-            return (
-              <View key={member.id} style={styles.memberRow}>
-                <View style={styles.memberAvatar}>
-                  <Text style={styles.memberAvatarText}>{getInitial(member.display_name)}</Text>
-                </View>
-                <View style={styles.memberBody}>
-                  <View style={styles.memberNameRow}>
-                    <Text style={styles.memberName}>{member.display_name}</Text>
-                    {isCaptain ? <Text style={styles.captainBadge}>⭐ Capitan</Text> : null}
-                  </View>
-                  <Text style={styles.memberStats}>
-                    {member.matches_played.toLocaleString('es-CL')}pj ·{' '}
-                    {member.wins.toLocaleString('es-CL')}g · ELO{' '}
-                    {member.elo.toLocaleString('es-CL')}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
-        </Section>
 
-        <Section>
-          <Text style={styles.sectionTitle}>Ultimos partidos</Text>
-          {matches.length === 0 ? (
-            <Text style={styles.emptyHint}>Sin partidos registrados aun</Text>
-          ) : (
-            matches.map((match) => (
-              <MatchRow key={match.id} match={match} teamId={normalizedTeamId} />
-            ))
-          )}
-        </Section>
+          <View style={styles.section}>
+            <SectionHeader title="Historial de Partidos" />
+            {matches.length === 0 ? (
+              <Text style={styles.emptyHint}>Aún no hay partidos registrados</Text>
+            ) : (
+              <View style={styles.matchesList}>
+                {matches.map((match) => (
+                  <MatchRow key={match.id} match={match} teamId={normalizedTeamId} />
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
 
         <View style={styles.ctaWrap}>
           {isOwnTeam ? (
@@ -283,7 +283,7 @@ export default function TeamPublicProfileScreen() {
               style={styles.outlineButton}
               onPress={() => router.push('/equipo/editar' as Href)}
             >
-              <Text style={styles.outlineButtonText}>✏️ Editar perfil publico</Text>
+              <Text style={styles.outlineButtonText}>EDITAR PERFIL PÚBLICO</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -292,7 +292,7 @@ export default function TeamPublicProfileScreen() {
                 router.push({ pathname: '/matchmaking', params: { teamId: normalizedTeamId } })
               }
             >
-              <Text style={styles.ctaButtonText}>⚽ Proponer partido</Text>
+              <Text style={styles.ctaButtonText}>PROPONER PARTIDO</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -301,32 +301,8 @@ export default function TeamPublicProfileScreen() {
   );
 }
 
-function Section({ children }: { children: React.ReactNode }) {
-  return <View style={styles.section}>{children}</View>;
-}
-
-function StatCell({
-  label,
-  value,
-  color,
-  bordered = false,
-}: {
-  label: string;
-  value: number;
-  color: string;
-  bordered?: boolean;
-}) {
-  return (
-    <View style={[styles.statCell, bordered && styles.statCellBorder]}>
-      <Text style={[styles.statNumber, { color }]}>{value.toLocaleString('es-CL')}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function MatchRow({ match, teamId }: { match: TeamMatchHistoryItem; teamId: string }) {
   const result = getMatchResult(match, teamId);
-  const meta = RESULT_META[result];
   const isHome = match.team_home_id === teamId;
   const rival = isHome ? match.away_name : match.home_name;
 
@@ -335,170 +311,125 @@ function MatchRow({ match, teamId }: { match: TeamMatchHistoryItem; teamId: stri
       <View style={styles.matchBody}>
         <Text style={styles.matchRival}>vs {rival}</Text>
         <Text style={styles.matchDate}>
-          hace {formatDistanceToNow(new Date(match.confirmed_at), { locale: es })}
+          {formatDistanceToNow(new Date(match.confirmed_at), { addSuffix: true, locale: es })}
         </Text>
       </View>
-      <Text style={styles.matchScore}>
-        {match.goals_home.toLocaleString('es-CL')} - {match.goals_away.toLocaleString('es-CL')}
-      </Text>
-      <View style={[styles.resultBadge, { backgroundColor: meta.backgroundColor }]}>
-        <Text style={[styles.resultBadgeText, { color: meta.color }]}>{meta.label}</Text>
+      <View style={styles.matchScoreRow}>
+        <Text style={styles.matchScore}>
+          {match.goals_home} - {match.goals_away}
+        </Text>
+        <ResultBadge result={result} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#f3f4f6', flex: 1 },
-  scrollContent: { paddingBottom: 32 },
+  screen: { backgroundColor: theme.colors.white, flex: 1 },
+  scrollContent: { paddingBottom: 40 },
   centeredScreen: {
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.colors.white,
     flex: 1,
     justifyContent: 'center',
     padding: 24,
   },
-  hero: { backgroundColor: '#0a3d1f', height: 240, overflow: 'hidden', paddingTop: 50 },
+  hero: { backgroundColor: theme.colors.primaryDark, paddingTop: 20, paddingBottom: 40, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, overflow: 'hidden' },
   heroImage: { ...StyleSheet.absoluteFillObject },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.42)' },
-  backButton: {
-    alignItems: 'center',
-    height: 40,
-    justifyContent: 'center',
-    left: 12,
-    position: 'absolute',
-    top: 48,
-    width: 40,
-    zIndex: 2,
-  },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
   heroContent: { alignItems: 'center', paddingHorizontal: 24, zIndex: 1 },
   logo: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
-    borderColor: '#f59e0b',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.gold,
     borderRadius: 40,
     borderWidth: 3,
     height: 80,
     justifyContent: 'center',
     width: 80,
+    marginBottom: 12,
   },
-  logoText: { color: '#ffffff', fontSize: 30, fontWeight: '900' },
+  logoText: { color: theme.colors.white, fontSize: 30, fontFamily: theme.fonts.bebas },
   teamName: {
-    color: '#ffffff',
-    fontSize: 34,
-    fontWeight: '900',
-    marginTop: 8,
+    color: theme.colors.white,
+    fontSize: 32,
+    fontFamily: theme.fonts.bebas,
     textAlign: 'center',
   },
-  heroMuted: { color: '#d1d5db', fontSize: 13, marginTop: 2 },
-  heroSubtle: { color: '#d1d5db', fontSize: 12, marginTop: 2 },
+  heroMetaRow: { flexDirection: 'row', marginTop: 8 },
+  heroMuted: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontFamily: theme.fonts.dmSansBold },
   eloBadge: {
-    backgroundColor: '#f59e0b',
-    borderRadius: 999,
-    marginTop: 8,
+    backgroundColor: theme.colors.gold,
+    borderRadius: 8,
+    marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  eloBadgeText: { color: '#78350f', fontSize: 13, fontWeight: '900' },
-  instagramHero: { alignItems: 'center', flexDirection: 'row', gap: 5, marginTop: 8 },
-  instagramHeroText: { color: '#ffffff', fontSize: 13, fontWeight: '800' },
+  eloBadgeText: { color: theme.colors.white, fontSize: 13, fontFamily: theme.fonts.dmSansBold },
+  instagramHero: { alignItems: 'center', flexDirection: 'row', gap: 6, marginTop: 12 },
+  instagramHeroText: { color: theme.colors.white, fontSize: 13, fontFamily: theme.fonts.dmSansBold },
   statsCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 4,
-    marginHorizontal: 16,
-    marginTop: -40,
+    backgroundColor: theme.colors.white,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginTop: -30,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
+    ...theme.shadow.sm,
   },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  statCell: { alignItems: 'center', paddingVertical: 10, width: '33.333%' },
-  statCellBorder: { borderLeftColor: '#e5e7eb', borderLeftWidth: 1 },
-  statNumber: { fontSize: 28, fontWeight: '900' },
-  statLabel: {
-    color: '#9ca3af',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginTop: 2,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
-  formRow: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 12 },
-  formLabel: { color: '#6b7280', fontSize: 13, fontWeight: '800' },
-  formDot: {
-    alignItems: 'center',
-    borderRadius: 11,
-    height: 22,
-    justifyContent: 'center',
-    width: 22,
-  },
-  formDotText: { fontSize: 11, fontWeight: '900' },
+  statsGrid: { flexDirection: 'row', justifyContent: 'space-around' },
+  formSection: { marginTop: 20, alignItems: 'center' },
+  formLabel: { color: theme.colors.gray, fontSize: 11, fontFamily: theme.fonts.dmSansBold, marginBottom: 8 },
+  formRow: { flexDirection: 'row', gap: 8 },
   section: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginTop: 14,
-    padding: 16,
+    marginTop: 24,
   },
   sectionHeader: {
-    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  sectionTitle: { color: '#111827', fontSize: 16, fontWeight: '900', marginBottom: 8 },
-  bio: { color: '#4b5563', fontSize: 14, lineHeight: 22 },
-  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 14 },
-  preferenceChip: { backgroundColor: '#f3f4f6', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
-  preferenceChipText: { color: '#374151', fontSize: 13, fontWeight: '800' },
-  countBadge: { backgroundColor: '#dcfce7', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
-  countBadgeText: { color: '#166534', fontSize: 12, fontWeight: '900' },
-  memberRow: { alignItems: 'center', flexDirection: 'row', gap: 10, paddingVertical: 8 },
-  memberAvatar: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
-    borderRadius: 20,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
+    marginBottom: 8,
   },
-  memberAvatarText: { color: '#ffffff', fontSize: 15, fontWeight: '900' },
-  memberBody: { flex: 1 },
-  memberNameRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  memberName: { color: '#111827', flexShrink: 1, fontSize: 14, fontWeight: '900' },
-  captainBadge: { color: '#92400e', fontSize: 11, fontWeight: '900' },
-  memberStats: { color: '#6b7280', fontSize: 12, fontWeight: '700', marginTop: 3 },
-  emptyTitle: { color: '#111827', fontSize: 18, fontWeight: '900', marginTop: 12 },
-  emptyHint: { color: '#6b7280', fontSize: 14 },
+  bio: { color: theme.colors.gray, fontSize: 14, lineHeight: 22, fontFamily: theme.fonts.dmSans },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  preferenceChip: { backgroundColor: theme.colors.gray100, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  preferenceChipText: { color: theme.colors.dark, fontSize: 12, fontFamily: theme.fonts.dmSansBold },
+  countBadge: { backgroundColor: '#dcfce7', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  countBadgeText: { color: theme.colors.primary, fontSize: 10, fontFamily: theme.fonts.dmSansBold },
+  membersList: { gap: 10 },
+  memberItem: { marginBottom: 2 },
+  emptyTitle: { color: theme.colors.dark, fontSize: 18, fontFamily: theme.fonts.dmSansBold, marginTop: 12 },
+  emptyHint: { color: theme.colors.gray, fontSize: 14, fontFamily: theme.fonts.dmSans },
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     marginTop: 16,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
-  primaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '900' },
-  matchRow: { alignItems: 'center', flexDirection: 'row', gap: 12, paddingVertical: 10 },
+  primaryButtonText: { color: theme.colors.white, fontSize: 14, fontFamily: theme.fonts.dmSansBold },
+  matchesList: { gap: 12 },
+  matchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.gray100,
+    padding: 16,
+    borderRadius: 16,
+  },
   matchBody: { flex: 1 },
-  matchRival: { color: '#111827', fontSize: 14, fontWeight: '900' },
-  matchDate: { color: '#6b7280', fontSize: 12, marginTop: 2 },
-  matchScore: { color: '#111827', fontSize: 20, fontWeight: '900' },
-  resultBadge: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
-  resultBadgeText: { fontSize: 12, fontWeight: '900' },
-  ctaWrap: { paddingHorizontal: 16, paddingTop: 16 },
-  ctaButton: { alignItems: 'center', backgroundColor: '#16a34a', borderRadius: 14, paddingVertical: 16 },
-  ctaButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
+  matchRival: { color: theme.colors.dark, fontSize: 15, fontFamily: theme.fonts.dmSansBold },
+  matchDate: { color: theme.colors.gray, fontSize: 12, marginTop: 2, fontFamily: theme.fonts.dmSans },
+  matchScoreRow: { alignItems: 'flex-end', gap: 6 },
+  matchScore: { color: theme.colors.dark, fontSize: 18, fontFamily: theme.fonts.bebas },
+  ctaWrap: { paddingHorizontal: 24, marginTop: 32 },
+  ctaButton: { alignItems: 'center', backgroundColor: theme.colors.primary, borderRadius: 12, paddingVertical: 16 },
+  ctaButtonText: { color: theme.colors.white, fontSize: 16, fontFamily: theme.fonts.dmSansBold },
   outlineButton: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: '#16a34a',
-    borderRadius: 14,
-    borderWidth: 1,
+    backgroundColor: theme.colors.white,
+    borderColor: theme.colors.primary,
+    borderRadius: 12,
+    borderWidth: 1.5,
     paddingVertical: 16,
   },
-  outlineButtonText: { color: '#16a34a', fontSize: 16, fontWeight: '900' },
+  outlineButtonText: { color: theme.colors.primary, fontSize: 16, fontFamily: theme.fonts.dmSansBold },
 });

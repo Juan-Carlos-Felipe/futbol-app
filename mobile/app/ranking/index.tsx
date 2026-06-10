@@ -1,11 +1,13 @@
+// ✅ REDISEÑADO con theme.ts
 import { useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useRouter, Stack } from 'expo-router';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RankingRow } from '@/components/ranking/RankingRow';
 import { SkeletonBox } from '@/components/ui/SkeletonBox';
 import { useRanking } from '@/hooks/useMatchmaking';
 import { supabase } from '@/lib/supabase';
+import { theme } from '@/lib/theme';
 
 type RankingTab = 'general' | 'week' | 'zone';
 
@@ -50,8 +52,8 @@ export default function RankingScreen() {
     if (activeTab !== 'general') {
       return (
         <View style={styles.comingSoon}>
-          <Ionicons name="time-outline" size={44} color="#9ca3af" />
-          <Text style={styles.comingSoonText}>Proximamente</Text>
+          <Ionicons name="time-outline" size={44} color={theme.colors.gray100} />
+          <Text style={styles.comingSoonText}>Próximamente</Text>
         </View>
       );
     }
@@ -82,7 +84,7 @@ export default function RankingScreen() {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.comingSoon}>
-            <Ionicons name="trophy-outline" size={44} color="#9ca3af" />
+            <Ionicons name="trophy-outline" size={44} color={theme.colors.gray100} />
             <Text style={styles.comingSoonText}>Aun no hay equipos en el ranking</Text>
           </View>
         }
@@ -92,17 +94,27 @@ export default function RankingScreen() {
 
   return (
     <View style={styles.screen}>
+      <Stack.Screen options={{
+        title: 'RANKING',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+        ),
+        headerShown: true
+      }} />
+
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={26} color="#ffffff" />
-        </TouchableOpacity>
-        <Text style={styles.title}>🏆 RANKING</Text>
-        <Text style={styles.subtitle}>Top equipos por ELO</Text>
+        <View style={styles.headerText}>
+            <Text style={styles.title}>TOP EQUIPOS</Text>
+            <Text style={styles.subtitle}>Ranking basado en ELO y resultados</Text>
+        </View>
         {myRanking ? (
           <View style={styles.myPositionCard}>
             <Text style={styles.myPositionText}>
-              Tu posicion: #{myRanking.position.toLocaleString('es-CL')} · ELO:{' '}
-              {myRanking.team.elo.toLocaleString('es-CL')}
+              TU EQUIPO: #{myRanking.position} · ELO: {myRanking.team.elo}
             </Text>
           </View>
         ) : null}
@@ -117,7 +129,7 @@ export default function RankingScreen() {
               style={[styles.tabButton, active && styles.tabButtonActive]}
               onPress={() => setActiveTab(tab.id)}
             >
-              <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label.toUpperCase()}</Text>
             </TouchableOpacity>
           );
         })}
@@ -143,56 +155,46 @@ function RankingSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#f3f4f6', flex: 1 },
+  screen: { backgroundColor: theme.colors.white, flex: 1 },
   header: {
-    backgroundColor: '#0a3d1f',
-    height: 180,
-    paddingHorizontal: 16,
-    paddingTop: 50,
+    backgroundColor: theme.colors.primaryDark,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  backButton: {
-    alignItems: 'center',
-    height: 38,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 12,
-    top: 48,
-    width: 38,
-  },
-  title: { color: '#ffffff', fontSize: 32, fontWeight: '900' },
-  subtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
+  headerText: { marginBottom: 12 },
+  title: { color: theme.colors.white, fontSize: 32, fontFamily: theme.fonts.bebas },
+  subtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontFamily: theme.fonts.dmSans },
   myPositionCard: {
     alignSelf: 'flex-start',
-    backgroundColor: '#f59e0b',
+    backgroundColor: theme.colors.gold,
     borderRadius: 12,
-    marginTop: 12,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  myPositionText: { color: '#78350f', fontSize: 13, fontWeight: '900' },
-  tabs: {
-    backgroundColor: '#ffffff',
-    borderBottomColor: '#e5e7eb',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    padding: 12,
-  },
-  tabButton: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 999,
-    flex: 1,
     paddingVertical: 10,
   },
-  tabButtonActive: { backgroundColor: '#16a34a' },
-  tabText: { color: '#6b7280', fontSize: 13, fontWeight: '800', textAlign: 'center' },
-  tabTextActive: { color: '#ffffff' },
-  listContent: { flexGrow: 1, padding: 16, paddingBottom: 28 },
+  myPositionText: { color: theme.colors.white, fontSize: 13, fontFamily: theme.fonts.dmSansBold },
+  tabs: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  tabButton: {
+    backgroundColor: theme.colors.gray100,
+    borderRadius: 12,
+    flex: 1,
+    paddingVertical: 12,
+  },
+  tabButtonActive: { backgroundColor: theme.colors.primary },
+  tabText: { color: theme.colors.gray, fontSize: 11, fontFamily: theme.fonts.dmSansBold, textAlign: 'center' },
+  tabTextActive: { color: theme.colors.white },
+  listContent: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 28 },
   comingSoon: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 24 },
-  comingSoonText: { color: '#6b7280', fontSize: 16, fontWeight: '800', marginTop: 10 },
+  comingSoonText: { color: theme.colors.gray, fontSize: 16, fontFamily: theme.fonts.dmSansBold, marginTop: 10 },
   skeletonRow: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.colors.white,
     borderRadius: 12,
     flexDirection: 'row',
     gap: 10,

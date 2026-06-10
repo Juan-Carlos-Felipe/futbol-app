@@ -1,3 +1,4 @@
+// ✅ REDISEÑADO con theme.ts
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,12 +11,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { VenueCard } from '@/components/venues/VenueCard';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import { useVenues } from '@/hooks/useVenues';
 import { Venue, VenueFilters } from '@/lib/venues';
+import { theme } from '@/lib/theme';
 
 const isWeb = Platform.OS === 'web';
 
@@ -75,9 +77,15 @@ export default function CanchasScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Canchas</Text>
+      <Stack.Screen options={{
+        title: 'CANCHAS',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerShown: true
+      }} />
+
+      {/* Control de vista */}
+      <View style={styles.viewToggleContainer}>
         <View style={styles.toggleRow}>
           <TouchableOpacity
             style={[
@@ -89,7 +97,7 @@ export default function CanchasScreen() {
             <Ionicons
               name="map-outline"
               size={16}
-              color={viewMode === 'map' ? '#ffffff' : '#6b7280'}
+              color={viewMode === 'map' ? theme.colors.white : theme.colors.gray}
             />
             <Text style={[
               styles.toggleText,
@@ -105,7 +113,7 @@ export default function CanchasScreen() {
             <Ionicons
               name="list-outline"
               size={16}
-              color={viewMode === 'list' ? '#ffffff' : '#6b7280'}
+              color={viewMode === 'list' ? theme.colors.white : theme.colors.gray}
             />
             <Text style={[styles.toggleText, viewMode === 'list' && styles.toggleTextActive]}>
               Lista
@@ -157,7 +165,7 @@ export default function CanchasScreen() {
       <View style={styles.content}>
         {isError ? (
           <View style={styles.centered}>
-            <Ionicons name="wifi-outline" size={52} color="#9ca3af" />
+            <Ionicons name="wifi-outline" size={52} color={theme.colors.gray100} />
             <Text style={styles.emptyTitle}>Error de conexión</Text>
             <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
               <Text style={styles.retryButtonText}>Reintentar</Text>
@@ -175,7 +183,7 @@ export default function CanchasScreen() {
             <Ionicons
               name={hasFilters ? 'options-outline' : 'football-outline'}
               size={52}
-              color="#9ca3af"
+              color={theme.colors.gray100}
             />
             <Text style={styles.emptyTitle}>
               {hasFilters ? 'Sin resultados' : 'No hay canchas disponibles'}
@@ -207,7 +215,7 @@ export default function CanchasScreen() {
                 🗺️ Mapa disponible solo en la app móvil!
               </Text>
               <TouchableOpacity
-                style={styles.toggleBtnActive}
+                style={[styles.toggleBtn, styles.toggleBtnActive]}
                 onPress={() => setViewMode('list')}
               >
                 <Text style={styles.toggleTextActive}>Ver lista de canchas</Text>
@@ -232,23 +240,16 @@ export default function CanchasScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1117',
+    backgroundColor: theme.colors.white,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  viewToggleContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 26,
-    fontWeight: '800',
+    alignItems: 'flex-end',
   },
   toggleRow: {
     flexDirection: 'row',
-    backgroundColor: isWeb ? '#f3f4f6' : '#1a1d27',
+    backgroundColor: theme.colors.gray100,
     borderRadius: 20,
     padding: 4,
   },
@@ -261,15 +262,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   toggleBtnActive: {
-    backgroundColor: isWeb ? '#16a34a' : '#22c55e',
+    backgroundColor: theme.colors.primary,
   },
   toggleText: {
-    color: isWeb ? '#6b7280' : '#888',
+    color: theme.colors.gray,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: theme.fonts.dmSansBold,
   },
   toggleTextActive: {
-    color: isWeb ? '#ffffff' : '#07120b',
+    color: theme.colors.white,
   },
   webMapFallback: {
     flex: 1,
@@ -278,7 +279,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   webMapFallbackText: {
-    color: '#888',
+    color: theme.colors.gray,
+    fontFamily: theme.fonts.dmSans,
     fontSize: 16,
     marginBottom: 16,
   },
@@ -298,73 +300,72 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#1a1d27',
-    borderWidth: 1,
-    borderColor: '#2a2d3a',
-    marginRight: 8,
+    backgroundColor: theme.colors.white,
+    borderWidth: 1.5,
+    borderColor: theme.colors.gray100,
   },
   chipActive: {
-    backgroundColor: '#22c55e',
-    borderColor: '#22c55e',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   chipText: {
-    color: '#aaa',
+    color: theme.colors.gray,
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: theme.fonts.dmSansMedium,
   },
   chipTextActive: {
-    color: '#07120b',
-    fontWeight: '700',
+    color: theme.colors.white,
+    fontFamily: theme.fonts.dmSansBold,
   },
   locationWarning: {
     marginHorizontal: 16,
     marginBottom: 8,
-    backgroundColor: '#2a2000',
-    borderRadius: 8,
+    backgroundColor: '#fffbeb',
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#facc15',
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: '#fef3c7',
   },
   locationWarningText: {
-    color: '#facc15',
+    color: theme.colors.gold,
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: theme.fonts.dmSansBold,
   },
   locationWarningButton: {
     marginTop: 8,
     alignSelf: 'flex-start',
-    backgroundColor: '#facc15',
-    borderRadius: 12,
+    backgroundColor: theme.colors.gold,
+    borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
   locationWarningButtonText: {
-    color: '#111827',
-    fontWeight: '700',
+    color: theme.colors.white,
+    fontFamily: theme.fonts.dmSansBold,
   },
   retryButton: {
     marginTop: 16,
-    backgroundColor: '#22c55e',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
   },
   retryButtonText: {
-    color: '#07120b',
-    fontWeight: '700',
+    color: theme.colors.white,
+    fontFamily: theme.fonts.dmSansBold,
   },
   clearFilterButton: {
     marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#22c55e',
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
   clearFilterButtonText: {
-    color: '#22c55e',
-    fontWeight: '700',
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.dmSansBold,
   },
   content: {
     flex: 1,
@@ -376,18 +377,16 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 32,
   },
-  emptyIcon: {
-    fontSize: 48,
-  },
   emptyTitle: {
-    color: '#fff',
+    color: theme.colors.dark,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: theme.fonts.dmSansBold,
     textAlign: 'center',
   },
   emptySubtitle: {
-    color: '#888',
+    color: theme.colors.gray,
     fontSize: 14,
+    fontFamily: theme.fonts.dmSans,
     textAlign: 'center',
     lineHeight: 20,
   },

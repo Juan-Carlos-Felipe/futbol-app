@@ -1,10 +1,13 @@
+// ✅ REDISEÑADO con theme.ts
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Reservation, ReservationPayment } from '@/lib/reservations';
+import { theme } from '@/lib/theme';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 type ReservationWithVenue = Reservation & {
   venues?: { name: string } | null;
@@ -140,8 +143,7 @@ export default function ReservationStatusScreen() {
 
   const paidCount = payments.filter((payment) => payment.status === 'paid').length;
   const totalCount = payments.length;
-  const progressWidth = totalCount > 0 ? `${Math.round((paidCount / totalCount) * 100)}%` : '0%';
-  const progressStyle = { width: progressWidth } as const;
+  const progressWidth = totalCount > 0 ? (paidCount / totalCount) : 0;
 
   const countdownText = remainingMs === null
     ? null
@@ -152,104 +154,132 @@ export default function ReservationStatusScreen() {
       ).padStart(2, '0')}:${String(Math.floor((remainingMs / 1000) % 60)).padStart(2, '0')}`;
 
   const countdownColor = remainingMs !== null && remainingMs > 0 && remainingMs < 2 * 60 * 60 * 1000
-    ? '#dc2626'
-    : '#374151';
+    ? theme.colors.loss
+    : theme.colors.gray;
 
   const statusText =
     reservation?.status === 'confirmed'
-      ? '✅ Confirmada'
+      ? 'Confirmada'
       : reservation?.status === 'cancelled'
-      ? '❌ Cancelada'
-      : '⏳ Esperando pagos';
+      ? 'Cancelada'
+      : 'Esperando pagos';
 
   const badgeStyle =
     reservation?.status === 'confirmed'
-      ? styles.badgeGreen
+      ? { backgroundColor: '#dcfce7', color: theme.colors.win }
       : reservation?.status === 'cancelled'
-      ? styles.badgeRed
-      : styles.badgeYellow;
+      ? { backgroundColor: '#fee2e2', color: theme.colors.loss }
+      : { backgroundColor: '#fef3c7', color: theme.colors.draw };
 
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Estado de la reserva</Text>
-        <View style={[styles.statusBadge, badgeStyle]}>
-          <Text style={styles.statusText}>{statusText}</Text>
-        </View>
-      </View>
+      <Stack.Screen options={{
+        title: 'ESTADO RESERVA',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.replace('/(tabs)/canchas')} style={{ marginLeft: 16 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+        ),
+        headerShown: true
+      }} />
 
-      <View style={styles.card}>
-        <Text style={styles.venueName}>{reservation?.venues?.name ?? 'Cancha'}</Text>
-        <Text style={styles.date}>
-          Fecha: {reservation?.created_at ? new Date(reservation.created_at).toLocaleDateString('es-CL') : '—'}
-        </Text>
-        <Text style={styles.time}>
-          Hora: {reservation?.created_at ? new Date(reservation.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : '—'}
-        </Text>
-
-        <View style={styles.progressRow}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { flex: paidCount }]} />
-            <View style={[styles.progressEmpty, { flex: totalCount - paidCount }]} />
+      <View style={styles.content}>
+        <View style={styles.headerRow}>
+          <SectionHeader title="Estado de la Reserva" />
+          <View style={[styles.statusBadge, { backgroundColor: badgeStyle.backgroundColor }]}>
+            <Text style={[styles.statusBadgeText, { color: badgeStyle.color }]}>{statusText.toUpperCase()}</Text>
           </View>
-          <Text style={styles.progressText}>
-            {paidCount} de {totalCount} jugadores pagaron
-          </Text>
         </View>
 
-        {countdownText ? (
-          <Text style={[styles.countdownText, { color: countdownColor }]}>Vence en {countdownText}</Text>
-        ) : null}
+        <View style={styles.card}>
+          <Text style={styles.venueName}>{reservation?.venues?.name?.toUpperCase() ?? 'CANCHA'}</Text>
+          <View style={styles.infoRow}>
+             <Ionicons name="calendar-outline" size={16} color={theme.colors.gray} />
+             <Text style={styles.infoText}>
+               {reservation?.created_at ? new Date(reservation.created_at).toLocaleDateString('es-CL') : '—'}
+             </Text>
+          </View>
+          <View style={styles.infoRow}>
+             <Ionicons name="time-outline" size={16} color={theme.colors.gray} />
+             <Text style={styles.infoText}>
+               {reservation?.created_at ? new Date(reservation.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : '—'}
+             </Text>
+          </View>
+
+          <View style={styles.progressSection}>
+             <View style={styles.progressLabelRow}>
+                <Text style={styles.progressLabel}>PROGRESO DE PAGOS</Text>
+                <Text style={styles.progressValue}>{paidCount}/{totalCount}</Text>
+             </View>
+             <View style={styles.progressBarBg}>
+                <View style={[styles.progressFill, { width: `${progressWidth * 100}%` }]} />
+             </View>
+             <Text style={styles.progressHint}>
+                {paidCount} de {totalCount} jugadores han pagado su parte
+             </Text>
+          </View>
+
+          {countdownText ? (
+            <View style={styles.countdownContainer}>
+               <Ionicons name="timer-outline" size={20} color={countdownColor} />
+               <Text style={[styles.countdownText, { color: countdownColor }]}>VENCE EN {countdownText}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => router.replace('/(tabs)/canchas')}
+          >
+            <Text style={styles.primaryBtnText}>VOLVER A CANCHAS</Text>
+          </TouchableOpacity>
+
+          {showCancelButton ? (
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => {
+                Alert.alert(
+                  '¿Cancelar reserva?',
+                  'Se cancelará la reserva y se notificará a los jugadores.',
+                  [
+                    { text: 'No, mantener', style: 'cancel' },
+                    {
+                      text: 'Sí, cancelar',
+                      style: 'destructive',
+                      onPress: async () => {
+                        const { error } = await supabase
+                          .from('reservations')
+                          .update({ status: 'cancelled' })
+                          .eq('id', reservationId);
+
+                        if (error) {
+                          Alert.alert('Error', 'No se pudo cancelar la reserva');
+                          return;
+                        }
+
+                        router.replace('/(tabs)/canchas' as any);
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar reserva</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
-
-      {showCancelButton ? (
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => {
-            Alert.alert(
-              '¿Cancelar reserva?',
-              'Se cancelará la reserva y se notificará a los jugadores.',
-              [
-                { text: 'No, mantener', style: 'cancel' },
-                {
-                  text: 'Sí, cancelar',
-                  style: 'destructive',
-                  onPress: async () => {
-                    const { error } = await supabase
-                      .from('reservations')
-                      .update({ status: 'cancelled' })
-                      .eq('id', reservationId);
-
-                    if (error) {
-                      Alert.alert('Error', 'No se pudo cancelar la reserva');
-                      return;
-                    }
-
-                    router.replace('/(tabs)/canchas' as any);
-                  },
-                },
-              ]
-            );
-          }}
-        >
-          <Text style={styles.cancelButtonText}>Cancelar reserva</Text>
-        </TouchableOpacity>
-      ) : null}
-
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.replace('/(tabs)/canchas' as any)}
-      >
-        <Text style={styles.buttonText}>Volver a canchas</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -257,112 +287,125 @@ export default function ReservationStatusScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
-    padding: 16,
+    backgroundColor: theme.colors.white,
   },
-  header: {
+  content: {
+    padding: 24,
+  },
+  headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
+    marginBottom: 8,
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 8,
   },
-  badgeYellow: {
-    backgroundColor: '#fef3c7',
-  },
-  badgeGreen: {
-    backgroundColor: '#d1fae5',
-  },
-  badgeRed: {
-    backgroundColor: '#fee2e2',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#92400e',
+  statusBadgeText: {
+    fontSize: 11,
+    fontFamily: theme.fonts.dmSansBold,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    backgroundColor: theme.colors.white,
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 32,
+    ...theme.shadow.sm,
   },
   venueName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 24,
+    fontFamily: theme.fonts.bebas,
+    color: theme.colors.dark,
+    marginBottom: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  infoText: {
+    fontSize: 14,
+    color: theme.colors.gray,
+    fontFamily: theme.fonts.dmSansBold,
+  },
+  progressSection: {
+    marginTop: 24,
+  },
+  progressLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  date: {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 4,
+  progressLabel: {
+    fontSize: 11,
+    fontFamily: theme.fonts.dmSansBold,
+    color: theme.colors.gray,
   },
-  time: {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 20,
+  progressValue: {
+    fontSize: 11,
+    fontFamily: theme.fonts.dmSansBold,
+    color: theme.colors.primary,
   },
-  progressRow: {
-    gap: 12,
-  },
-  progressBar: {
+  progressBarBg: {
     width: '100%',
-    height: 8,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 4,
+    height: 10,
+    backgroundColor: theme.colors.gray100,
+    borderRadius: 5,
     overflow: 'hidden',
-    flexDirection: 'row',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
   },
-  progressEmpty: {
-    height: '100%',
-    backgroundColor: 'transparent',
-  },
-  progressText: {
-    fontSize: 14,
-    color: '#374151',
+  progressHint: {
+    fontSize: 12,
+    color: theme.colors.gray,
+    fontFamily: theme.fonts.dmSans,
+    marginTop: 8,
     textAlign: 'center',
   },
-  button: {
-    backgroundColor: '#16a34a',
-    borderRadius: 12,
-    paddingVertical: 14,
+  countdownContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
+    justifyContent: 'center',
+    marginTop: 20,
+    gap: 8,
+    backgroundColor: '#fffbeb',
+    padding: 12,
+    borderRadius: 12,
   },
   countdownText: {
     fontSize: 14,
-    fontWeight: '600',
-    marginTop: 12,
-    textAlign: 'center',
+    fontFamily: theme.fonts.dmSansBold,
+  },
+  actions: {
+    gap: 12,
+  },
+  primaryBtn: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  primaryBtnText: {
+    color: theme.colors.white,
+    fontSize: 16,
+    fontFamily: theme.fonts.dmSansBold,
   },
   cancelButton: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: theme.colors.loss,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 12,
   },
   cancelButtonText: {
-    color: '#dc2626',
-    fontSize: 16,
-    fontWeight: '700',
+    color: theme.colors.loss,
+    fontSize: 14,
+    fontFamily: theme.fonts.dmSansBold,
   },
 });

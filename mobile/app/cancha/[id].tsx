@@ -1,3 +1,4 @@
+// ✅ REDISEÑADO con theme.ts
 import { useState } from 'react';
 import {
   View,
@@ -11,7 +12,7 @@ import {
   Platform,
   FlatList,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVenueDetail } from '@/hooks/useVenueDetail';
@@ -20,6 +21,8 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { openDirections } from '@/components/venues/MapLinkSheet';
 import { SkeletonBox } from '@/components/ui/SkeletonBox';
+import { theme } from '@/lib/theme';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 const isWeb = Platform.OS === 'web';
 
@@ -144,18 +147,26 @@ export default function VenueDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{
+        headerShown: true,
+        headerTransparent: true,
+        headerTitle: '',
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerBackBtn}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+        ),
+      }} />
+
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {photoUrl ? (
           <ImageBackground source={{ uri: photoUrl }} style={styles.heroImage}>
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.75)']}
+              colors={['transparent', 'rgba(0,0,0,0.8)']}
               style={styles.heroOverlay}
             >
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={24} color="#ffffff" />
-              </TouchableOpacity>
               <View style={styles.heroContent}>
-                <Text style={styles.heroTitle}>{venue.name}</Text>
+                <Text style={styles.heroTitle}>{venue.name.toUpperCase()}</Text>
                 <View style={styles.heroAddressRow}>
                   <Ionicons name="location-outline" size={16} color="rgba(255,255,255,0.85)" />
                   <Text style={styles.heroAddress} numberOfLines={1}>
@@ -174,10 +185,7 @@ export default function VenueDetailScreen() {
           </ImageBackground>
         ) : (
           <View style={styles.heroPlaceholder}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#ffffff" />
-            </TouchableOpacity>
-            <Ionicons name="american-football" size={64} color="#ffffff" />
+            <Ionicons name="football-outline" size={64} color={theme.colors.white} />
           </View>
         )}
 
@@ -223,14 +231,14 @@ export default function VenueDetailScreen() {
               style={styles.directionsButton}
               onPress={() => openDirections({ lat: venue.lat!, lng: venue.lng!, name: venue.name })}
             >
-              <Ionicons name="navigate-outline" size={20} color="#2563eb" />
+              <Ionicons name="navigate-outline" size={20} color={theme.colors.blue} />
               <Text style={styles.directionsButtonText}>Cómo llegar</Text>
             </TouchableOpacity>
           ) : null}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Comodidades</Text>
+          <SectionHeader title="Comodidades" />
           {venue.amenities && venue.amenities.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.amenitiesScroll}>
               {venue.amenities.map((amenity, index) => (
@@ -238,7 +246,7 @@ export default function VenueDetailScreen() {
                   <Ionicons
                     name={getAmenityIcon(amenity) as any}
                     size={16}
-                    color="#166534"
+                    color={theme.colors.primary}
                     style={styles.amenityIcon}
                   />
                   <Text style={styles.amenityText}>{amenity}</Text>
@@ -251,7 +259,7 @@ export default function VenueDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Elegí una fecha</Text>
+          <SectionHeader title="Elegí una fecha" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
             {next7Days.map((date) => {
               const dateStr = date.toISOString().split('T')[0];
@@ -263,13 +271,13 @@ export default function VenueDetailScreen() {
                   onPress={() => setSelectedDate(dateStr)}
                 >
                   <Text style={[styles.dateWeekday, isSelected && styles.dateTextSelected]}>
-                    {format(date, 'EEE', { locale: es })}
+                    {format(date, 'EEE', { locale: es }).toUpperCase()}
                   </Text>
                   <Text style={[styles.dateDay, isSelected && styles.dateTextSelected]}>
                     {format(date, 'd')}
                   </Text>
                   <Text style={[styles.dateMonth, isSelected && styles.dateTextSelected]}>
-                    {format(date, 'MMM', { locale: es })}
+                    {format(date, 'MMM', { locale: es }).toUpperCase()}
                   </Text>
                 </TouchableOpacity>
               );
@@ -278,14 +286,11 @@ export default function VenueDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <View style={styles.slotsHeader}>
-            <Text style={styles.sectionTitle}>Horarios disponibles</Text>
-            <Text style={styles.slotsSubtitle}>Seleccioná un horario para reservar</Text>
-          </View>
+          <SectionHeader title="Horarios disponibles" subtitle="Seleccioná un horario para reservar" />
 
           {isLoading ? (
             <View style={styles.centeredSmall}>
-              <ActivityIndicator color="#16a34a" />
+              <ActivityIndicator color={theme.colors.primary} />
             </View>
           ) : slots.length === 0 ? (
             <Text style={styles.noSlotsText}>No hay horarios disponibles para este día</Text>
@@ -330,7 +335,7 @@ export default function VenueDetailScreen() {
         </View>
 
         <View style={[styles.section, styles.lastSection]}>
-          <Text style={styles.sectionTitle}>Lo que dicen los jugadores</Text>
+          <SectionHeader title="Reseñas de Jugadores" />
           {reviews.length === 0 ? (
             <Text style={styles.noReviewsText}>Aún no hay reseñas</Text>
           ) : (
@@ -352,16 +357,24 @@ export default function VenueDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: theme.colors.white,
   },
   content: {
     paddingBottom: 40,
+  },
+  headerBackBtn: {
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: theme.colors.white,
     gap: 12,
   },
   centeredSmall: {
@@ -370,26 +383,26 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   errorText: {
-    color: '#111827',
+    color: theme.colors.dark,
     fontSize: 16,
+    fontFamily: theme.fonts.dmSansBold,
   },
   link: {
-    color: '#2563eb',
+    color: theme.colors.primary,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: theme.fonts.dmSansBold,
   },
 
   heroImage: {
     width: '100%',
-    height: 260,
+    height: 280,
   },
   heroPlaceholder: {
     width: '100%',
-    height: 260,
-    backgroundColor: '#166534',
+    height: 280,
+    backgroundColor: theme.colors.primaryDark,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
   },
   heroOverlay: {
     position: 'absolute',
@@ -397,28 +410,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'space-between',
-    paddingTop: 40,
-    paddingBottom: 16,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 40,
-    left: 16,
-    zIndex: 10,
-    padding: 4,
+    justifyContent: 'flex-end',
+    paddingBottom: 24,
+    paddingHorizontal: 20,
   },
   heroContent: {
-    position: 'absolute',
-    bottom: 16,
-    left: 16,
-    right: 16,
-    gap: 6,
+    gap: 4,
   },
   heroTitle: {
-    color: '#ffffff',
-    fontSize: 24,
-    fontWeight: '700',
+    color: theme.colors.white,
+    fontSize: 28,
+    fontFamily: theme.fonts.bebas,
   },
   heroAddressRow: {
     flexDirection: 'row',
@@ -428,22 +430,22 @@ const styles = StyleSheet.create({
   heroAddress: {
     color: 'rgba(255,255,255,0.85)',
     fontSize: 13,
+    fontFamily: theme.fonts.dmSans,
   },
   heroMeta: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
+    fontFamily: theme.fonts.dmSansBold,
   },
 
   card: {
-    margin: 16,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    margin: 20,
+    marginTop: -20,
+    backgroundColor: theme.colors.white,
+    borderRadius: 20,
+    padding: 20,
     gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
+    ...theme.shadow.sm,
   },
   priceRatingRow: {
     flexDirection: 'row',
@@ -459,26 +461,28 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   priceText: {
-    color: '#16a34a',
+    color: theme.colors.primary,
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: theme.fonts.bebas,
   },
   perHourText: {
-    color: '#6b7280',
+    color: theme.colors.gray,
     fontSize: 14,
+    fontFamily: theme.fonts.dmSansBold,
   },
   pricePublicText: {
-    color: '#6b7280',
+    color: theme.colors.gray,
     fontSize: 14,
     textDecorationLine: 'line-through',
+    fontFamily: theme.fonts.dmSans,
   },
   freeText: {
-    color: '#16a34a',
+    color: theme.colors.primary,
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: theme.fonts.bebas,
   },
   municipalBadge: {
-    backgroundColor: '#123d25',
+    backgroundColor: '#dcfce7',
     alignSelf: 'flex-start',
     borderRadius: 20,
     paddingHorizontal: 10,
@@ -486,22 +490,23 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   municipalText: {
-    color: '#22c55e',
+    color: theme.colors.primary,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: theme.fonts.dmSansBold,
   },
 
   ratingColumn: {
     alignItems: 'flex-end',
   },
   ratingBig: {
-    color: '#facc15',
+    color: theme.colors.gold,
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: theme.fonts.dmSansBold,
   },
   reviewCount: {
-    color: '#6b7280',
+    color: theme.colors.gray,
     fontSize: 12,
+    fontFamily: theme.fonts.dmSans,
   },
 
   directionsButton: {
@@ -509,102 +514,93 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.colors.blueBg,
     borderRadius: 12,
     paddingVertical: 12,
     marginTop: 4,
   },
   directionsButtonText: {
-    color: '#2563eb',
+    color: theme.colors.blue,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: theme.fonts.dmSansBold,
   },
 
   section: {
-    marginHorizontal: 16,
-    marginBottom: 24,
+    marginHorizontal: 20,
+    marginBottom: 28,
   },
   lastSection: {
     marginBottom: 0,
   },
-  sectionTitle: {
-    color: '#111827',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-
   amenitiesScroll: {
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
   },
   amenityChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0fdf4',
+    backgroundColor: theme.colors.gray100,
     borderRadius: 20,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     marginRight: 8,
   },
   amenityIcon: {
     marginRight: 6,
   },
   amenityText: {
-    color: '#166534',
+    color: theme.colors.dark,
     fontSize: 13,
+    fontFamily: theme.fonts.dmSansBold,
   },
   noAmenitiesText: {
-    color: '#6b7280',
+    color: theme.colors.gray,
     fontSize: 13,
+    fontFamily: theme.fonts.dmSans,
   },
 
   dateScroll: {
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
   },
   dateChip: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginRight: 8,
-    minWidth: 64,
+    backgroundColor: theme.colors.gray100,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginRight: 10,
+    minWidth: 70,
   },
   dateChipSelected: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
   },
   dateWeekday: {
-    color: '#6b7280',
-    fontSize: 12,
+    color: theme.colors.gray,
+    fontSize: 11,
+    fontFamily: theme.fonts.dmSansBold,
   },
   dateDay: {
-    color: '#111827',
-    fontSize: 18,
-    fontWeight: '700',
+    color: theme.colors.dark,
+    fontSize: 22,
+    fontFamily: theme.fonts.bebas,
   },
   dateMonth: {
-    color: '#6b7280',
-    fontSize: 12,
+    color: theme.colors.gray,
+    fontSize: 11,
+    fontFamily: theme.fonts.dmSansBold,
   },
   dateTextSelected: {
-    color: '#ffffff',
+    color: theme.colors.white,
   },
 
-  slotsHeader: {
-    marginBottom: 8,
-  },
-  slotsSubtitle: {
-    color: '#6b7280',
-    fontSize: 13,
-  },
   noSlotsText: {
-    color: '#6b7280',
+    color: theme.colors.gray,
     fontSize: 13,
     textAlign: 'center',
     paddingVertical: 24,
+    fontFamily: theme.fonts.dmSans,
   },
   slotsRow: {
     justifyContent: 'space-between',
@@ -612,16 +608,16 @@ const styles = StyleSheet.create({
   },
   slotCard: {
     flex: 1,
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: theme.colors.white,
+    borderWidth: 1.5,
+    borderColor: theme.colors.gray100,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 12,
   },
   slotCardDisabled: {
-    backgroundColor: '#f9fafb',
-    borderColor: '#e5e7eb',
+    backgroundColor: theme.colors.gray100,
+    borderColor: 'transparent',
   },
   slotTopRow: {
     flexDirection: 'row',
@@ -629,42 +625,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   slotTime: {
-    color: '#166534',
-    fontSize: 14,
-    fontWeight: '700',
+    color: theme.colors.primary,
+    fontSize: 16,
+    fontFamily: theme.fonts.bebas,
   },
   slotTimeDisabled: {
-    color: '#9ca3af',
+    color: theme.colors.gray,
     textDecorationLine: 'line-through',
   },
   occupiedBadge: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: '#fee2e2',
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   occupiedText: {
-    color: '#dc2626',
+    color: theme.colors.loss,
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: theme.fonts.dmSansBold,
   },
 
   noReviewsText: {
-    color: '#6b7280',
+    color: theme.colors.gray,
     fontSize: 13,
+    fontFamily: theme.fonts.dmSans,
   },
   seeAllReviewsText: {
-    color: '#2563eb',
+    color: theme.colors.primary,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: theme.fonts.dmSansBold,
     marginTop: 12,
     textAlign: 'center',
   },
   reviewCard: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: theme.colors.gray100,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 12,
     gap: 12,
   },
@@ -672,14 +669,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#22c55e',
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   reviewAvatarText: {
-    color: '#ffffff',
+    color: theme.colors.white,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: theme.fonts.bebas,
   },
   reviewContent: {
     flex: 1,
@@ -691,21 +688,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reviewName: {
-    color: '#111827',
+    color: theme.colors.dark,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: theme.fonts.dmSansBold,
   },
   reviewDate: {
-    color: '#9ca3af',
+    color: theme.colors.gray,
     fontSize: 11,
+    fontFamily: theme.fonts.dmSans,
   },
   reviewStars: {
-    color: '#facc15',
+    color: theme.colors.gold,
     fontSize: 14,
   },
   reviewComment: {
-    color: '#6b7280',
+    color: theme.colors.gray,
     fontSize: 13,
     lineHeight: 18,
+    fontFamily: theme.fonts.dmSans,
   },
 });

@@ -17,7 +17,8 @@
         }
       ],
       "expo-location",
-      "react-native-map-link"
+      "react-native-map-link",
+      "expo-font"
     ],
     "ios": {
       "infoPlist": {

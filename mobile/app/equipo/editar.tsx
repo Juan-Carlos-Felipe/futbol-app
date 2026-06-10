@@ -1,5 +1,6 @@
+// ✅ REDISEÑADO con theme.ts
 import { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +18,9 @@ import {
 } from '@/hooks/useMatchmaking';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { theme } from '@/lib/theme';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Ionicons } from '@expo/vector-icons';
 
 type EditForm = {
   bio: string;
@@ -98,7 +102,7 @@ export default function EditTeamPublicProfileScreen() {
       : null;
 
     if (foundedYear !== null && Number.isNaN(foundedYear)) {
-      Alert.alert('Ano invalido', 'Ingresa un ano de fundacion valido.');
+      Alert.alert('Año inválido', 'Ingresa un año de fundación válido.');
       return;
     }
 
@@ -114,7 +118,7 @@ export default function EditTeamPublicProfileScreen() {
           : null,
         is_public: form.isPublic,
       });
-      Alert.alert('Perfil actualizado!', 'Los cambios fueron guardados.');
+      Alert.alert('¡Perfil actualizado!', 'Los cambios fueron guardados.');
       router.back();
     } catch (error: unknown) {
       Alert.alert('Error', error instanceof Error ? error.message : 'No se pudo guardar.');
@@ -124,7 +128,7 @@ export default function EditTeamPublicProfileScreen() {
   if (checkingAccess || isLoading) {
     return (
       <View style={styles.centeredScreen}>
-        <ActivityIndicator color="#16a34a" size="large" />
+        <ActivityIndicator color={theme.colors.primary} size="large" />
       </View>
     );
   }
@@ -132,7 +136,7 @@ export default function EditTeamPublicProfileScreen() {
   if (!teamId || !isCaptain) {
     return (
       <View style={styles.centeredScreen}>
-        <Text style={styles.lockTitle}>Solo el capitan puede editar este perfil</Text>
+        <Text style={styles.lockTitle}>Solo el capitán puede editar este perfil</Text>
         <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
           <Text style={styles.primaryButtonText}>Volver</Text>
         </TouchableOpacity>
@@ -141,104 +145,122 @@ export default function EditTeamPublicProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Editar perfil publico</Text>
+    <View style={styles.container}>
+      <Stack.Screen options={{
+        title: 'EDITAR PERFIL',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+        ),
+        headerShown: true
+      }} />
 
-      <Field label="Bio">
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Conta sobre tu equipo..."
-          placeholderTextColor="#9ca3af"
-          value={form.bio}
-          onChangeText={(value) => updateForm('bio', value)}
-          multiline
-          maxLength={500}
-        />
-        <Text style={styles.counter}>{form.bio.length.toLocaleString('es-CL')}/500</Text>
-      </Field>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <SectionHeader title="Información Pública" />
 
-      <Field label="Zona home">
-        <TextInput
-          style={styles.input}
-          placeholder="ej: Providencia, Santiago"
-          placeholderTextColor="#9ca3af"
-          value={form.homeZone}
-          onChangeText={(value) => updateForm('homeZone', value)}
-        />
-      </Field>
-
-      <Field label="Ano de fundacion">
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={form.foundedYear}
-          onChangeText={(value) => updateForm('foundedYear', value.replace(/\D/g, ''))}
-        />
-      </Field>
-
-      <Field label="Formato preferido">
-        <View style={styles.pills}>
-          {SIZE_OPTIONS.map((option) => (
-            <Pill
-              key={option}
-              label={option}
-              active={form.preferredSize === option}
-              onPress={() => updateForm('preferredSize', option)}
-            />
-          ))}
-        </View>
-      </Field>
-
-      <Field label="Superficie preferida">
-        <View style={styles.pills}>
-          {SURFACE_OPTIONS.map((option) => (
-            <Pill
-              key={option}
-              label={option}
-              active={form.preferredSurface === option}
-              onPress={() => updateForm('preferredSurface', option)}
-            />
-          ))}
-        </View>
-      </Field>
-
-      <Field label="Instagram">
-        <View style={styles.instagramInput}>
-          <Text style={styles.instagramPrefix}>@</Text>
+        <Field label="BIO DEL EQUIPO">
           <TextInput
-            style={styles.instagramTextInput}
-            placeholder="mi_equipo"
-            placeholderTextColor="#9ca3af"
-            autoCapitalize="none"
-            value={form.instagram}
-            onChangeText={(value) => updateForm('instagram', value.replace('@', ''))}
+            style={[styles.input, styles.textArea]}
+            placeholder="Cuenta sobre la historia de tu equipo..."
+            placeholderTextColor={theme.colors.gray}
+            value={form.bio}
+            onChangeText={(value) => updateForm('bio', value)}
+            multiline
+            maxLength={500}
+          />
+          <Text style={styles.counter}>{form.bio.length}/500</Text>
+        </Field>
+
+        <Field label="ZONA HOME">
+          <TextInput
+            style={styles.input}
+            placeholder="ej: Providencia, Santiago"
+            placeholderTextColor={theme.colors.gray}
+            value={form.homeZone}
+            onChangeText={(value) => updateForm('homeZone', value)}
+          />
+        </Field>
+
+        <Field label="AÑO DE FUNDACIÓN">
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={form.foundedYear}
+            onChangeText={(value) => updateForm('foundedYear', value.replace(/\D/g, ''))}
+          />
+        </Field>
+
+        <SectionHeader title="Preferencias de Juego" />
+
+        <Field label="FORMATO PREFERIDO">
+          <View style={styles.pills}>
+            {SIZE_OPTIONS.map((option) => (
+              <Pill
+                key={option}
+                label={option}
+                active={form.preferredSize === option}
+                onPress={() => updateForm('preferredSize', option)}
+              />
+            ))}
+          </View>
+        </Field>
+
+        <Field label="SUPERFICIE PREFERIDA">
+          <View style={styles.pills}>
+            {SURFACE_OPTIONS.map((option) => (
+              <Pill
+                key={option}
+                label={option}
+                active={form.preferredSurface === option}
+                onPress={() => updateForm('preferredSurface', option)}
+              />
+            ))}
+          </View>
+        </Field>
+
+        <SectionHeader title="Redes Sociales" />
+
+        <Field label="INSTAGRAM">
+          <View style={styles.instagramInput}>
+            <Text style={styles.instagramPrefix}>@</Text>
+            <TextInput
+              style={styles.instagramTextInput}
+              placeholder="nombre_equipo"
+              placeholderTextColor={theme.colors.gray}
+              autoCapitalize="none"
+              value={form.instagram}
+              onChangeText={(value) => updateForm('instagram', value.replace('@', ''))}
+            />
+          </View>
+        </Field>
+
+        <View style={styles.switchCard}>
+          <View style={styles.switchText}>
+            <Text style={styles.switchTitle}>Perfil Público</Text>
+            <Text style={styles.switchDescription}>
+              Si está desactivado, el equipo no aparecerá en búsquedas ni ranking.
+            </Text>
+          </View>
+          <Switch
+            value={form.isPublic}
+            onValueChange={(value) => updateForm('isPublic', value)}
+            trackColor={{ false: theme.colors.gray100, true: '#bbf7d0' }}
+            thumbColor={form.isPublic ? theme.colors.primary : theme.colors.white}
           />
         </View>
-      </Field>
 
-      <View style={styles.switchCard}>
-        <View style={styles.switchText}>
-          <Text style={styles.switchTitle}>Perfil publico</Text>
-          <Text style={styles.switchDescription}>
-            Si esta OFF, el equipo no aparece en busquedas ni ranking.
-          </Text>
-        </View>
-        <Switch
-          value={form.isPublic}
-          onValueChange={(value) => updateForm('isPublic', value)}
-          trackColor={{ false: '#d1d5db', true: '#bbf7d0' }}
-          thumbColor={form.isPublic ? '#16a34a' : '#f9fafb'}
-        />
-      </View>
-
-      <TouchableOpacity
-        style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-        onPress={handleSave}
-        disabled={isSaving}
-      >
-        <Text style={styles.saveButtonText}>{isSaving ? 'Guardando...' : 'Guardar cambios'}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={isSaving}
+        >
+          <Text style={styles.saveButtonText}>{isSaving ? 'GUARDANDO...' : 'GUARDAR CAMBIOS'}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -268,79 +290,77 @@ function Pill({
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#f3f4f6', flex: 1 },
-  content: { padding: 20, paddingBottom: 36 },
+  container: { flex: 1, backgroundColor: theme.colors.white },
+  screen: { flex: 1 },
+  content: { padding: 24, paddingBottom: 40 },
   centeredScreen: {
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.colors.white,
     flex: 1,
     justifyContent: 'center',
     padding: 24,
   },
-  title: { color: '#111827', fontSize: 26, fontWeight: '900', marginBottom: 20 },
-  lockTitle: { color: '#111827', fontSize: 18, fontWeight: '900', textAlign: 'center' },
-  field: { marginBottom: 16 },
-  label: { color: '#111827', fontSize: 14, fontWeight: '900', marginBottom: 8 },
+  lockTitle: { color: theme.colors.dark, fontSize: 18, fontFamily: theme.fonts.dmSansBold, textAlign: 'center' },
+  field: { marginBottom: 20 },
+  label: { color: theme.colors.gray, fontSize: 11, fontFamily: theme.fonts.dmSansBold, marginBottom: 8 },
   input: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e5e7eb',
+    backgroundColor: theme.colors.gray100,
     borderRadius: 12,
-    borderWidth: 1,
-    color: '#111827',
+    color: theme.colors.dark,
     fontSize: 15,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontFamily: theme.fonts.dmSans,
   },
-  textArea: { minHeight: 120, textAlignVertical: 'top' },
-  counter: { color: '#9ca3af', fontSize: 12, marginTop: 6, textAlign: 'right' },
+  textArea: { minHeight: 100, textAlignVertical: 'top' },
+  counter: { color: theme.colors.gray, fontSize: 11, marginTop: 6, textAlign: 'right', fontFamily: theme.fonts.dmSans },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: {
-    backgroundColor: '#ffffff',
-    borderColor: '#d1d5db',
+    backgroundColor: theme.colors.white,
+    borderColor: theme.colors.gray100,
     borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    borderWidth: 1.5,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  pillActive: { backgroundColor: '#16a34a', borderColor: '#16a34a' },
-  pillText: { color: '#4b5563', fontSize: 13, fontWeight: '900' },
-  pillTextActive: { color: '#ffffff' },
+  pillActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  pillText: { color: theme.colors.gray, fontSize: 13, fontFamily: theme.fonts.dmSansBold },
+  pillTextActive: { color: theme.colors.white },
   instagramInput: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: '#e5e7eb',
+    backgroundColor: theme.colors.gray100,
     borderRadius: 12,
-    borderWidth: 1,
     flexDirection: 'row',
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
   },
-  instagramPrefix: { color: '#6b7280', fontSize: 16, fontWeight: '900', marginRight: 2 },
-  instagramTextInput: { color: '#111827', flex: 1, fontSize: 15, paddingVertical: 13 },
+  instagramPrefix: { color: theme.colors.gray, fontSize: 16, fontFamily: theme.fonts.dmSansBold, marginRight: 2 },
+  instagramTextInput: { color: theme.colors.dark, flex: 1, fontSize: 15, paddingVertical: 14, fontFamily: theme.fonts.dmSans },
   switchCard: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
+    backgroundColor: theme.colors.white,
+    borderRadius: 16,
     flexDirection: 'row',
-    marginBottom: 20,
-    padding: 16,
+    marginBottom: 32,
+    padding: 20,
+    ...theme.shadow.sm,
   },
   switchText: { flex: 1, paddingRight: 12 },
-  switchTitle: { color: '#111827', fontSize: 15, fontWeight: '900' },
-  switchDescription: { color: '#6b7280', fontSize: 12, lineHeight: 17, marginTop: 3 },
+  switchTitle: { color: theme.colors.dark, fontSize: 16, fontFamily: theme.fonts.dmSansBold },
+  switchDescription: { color: theme.colors.gray, fontSize: 12, lineHeight: 18, marginTop: 4, fontFamily: theme.fonts.dmSans },
   saveButton: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
-    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
     paddingVertical: 16,
   },
   saveButtonDisabled: { opacity: 0.6 },
-  saveButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
+  saveButtonText: { color: theme.colors.white, fontSize: 16, fontFamily: theme.fonts.dmSansBold },
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     marginTop: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
-  primaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '900' },
+  primaryButtonText: { color: theme.colors.white, fontSize: 14, fontFamily: theme.fonts.dmSansBold },
 });

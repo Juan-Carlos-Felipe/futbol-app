@@ -1,8 +1,9 @@
+// ✅ REDISEÑADO con theme.ts
 import { useEffect, useMemo, useState } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import {
   ActivityIndicator,
   Alert,
@@ -23,23 +24,26 @@ import {
 } from '@/hooks/useMatchmaking';
 import type { MatchRequest, MatchRequestResponse, TeamStats } from '@/lib/matchmaking';
 import { supabase } from '@/lib/supabase';
+import { theme } from '@/lib/theme';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 const LEVEL_META: Record<
   MatchRequest['level'],
   { label: string; color: string; backgroundColor: string }
 > = {
   amateur: { label: 'Amateur', color: '#4b5563', backgroundColor: '#f3f4f6' },
-  intermedio: { label: 'Intermedio', color: '#2563eb', backgroundColor: '#dbeafe' },
-  competitivo: { label: 'Competitivo', color: '#92400e', backgroundColor: '#fef3c7' },
+  intermedio: { label: 'Intermedio', color: theme.colors.blue, backgroundColor: theme.colors.blueBg },
+  competitivo: { label: 'Competitivo', color: theme.colors.gold, backgroundColor: '#fffbeb' },
 };
 
 const RESPONSE_META: Record<
   MatchRequestResponse['status'],
   { label: string; color: string; backgroundColor: string }
 > = {
-  pending: { label: 'Esperando', color: '#92400e', backgroundColor: '#fef3c7' },
-  accepted: { label: 'Aceptado', color: '#166534', backgroundColor: '#dcfce7' },
-  rejected: { label: 'Rechazado', color: '#991b1b', backgroundColor: '#fee2e2' },
+  pending: { label: 'Esperando', color: theme.colors.draw, backgroundColor: '#fef3c7' },
+  accepted: { label: 'Aceptado', color: theme.colors.win, backgroundColor: '#dcfce7' },
+  rejected: { label: 'Rechazado', color: theme.colors.loss, backgroundColor: '#fee2e2' },
 };
 
 function getInitial(name: string) {
@@ -140,7 +144,7 @@ export default function RivalRequestDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.centeredScreen}>
-        <ActivityIndicator color="#16a34a" size="large" />
+        <ActivityIndicator color={theme.colors.primary} size="large" />
       </View>
     );
   }
@@ -148,7 +152,7 @@ export default function RivalRequestDetailScreen() {
   if (isError || !request) {
     return (
       <View style={styles.centeredScreen}>
-        <Ionicons name="alert-circle-outline" size={52} color="#9ca3af" />
+        <Ionicons name="alert-circle-outline" size={52} color={theme.colors.gray100} />
         <Text style={styles.emptyTitle}>No se pudo cargar el anuncio</Text>
         <TouchableOpacity style={styles.primaryButton} onPress={() => refetch()}>
           <Text style={styles.primaryButtonText}>Reintentar</Text>
@@ -167,153 +171,178 @@ export default function RivalRequestDetailScreen() {
 
   return (
     <View style={styles.screen}>
+       <Stack.Screen options={{
+        title: 'DETALLE RIVAL',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+        ),
+        headerShown: true
+      }} />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={26} color="#ffffff" />
-          </TouchableOpacity>
-
           <View style={styles.heroContent}>
             <View style={styles.logo}>
               <Text style={styles.logoText}>{getInitial(teamName)}</Text>
             </View>
-            <Text style={styles.teamName}>{teamName}</Text>
-            {publicProfile?.home_zone ? (
-              <Text style={styles.heroMuted}>Pin: {publicProfile.home_zone}</Text>
-            ) : null}
-            {publicProfile?.founded_year ? (
-              <Text style={styles.heroSubtle}>Desde {publicProfile.founded_year}</Text>
-            ) : null}
+            <Text style={styles.teamName}>{teamName.toUpperCase()}</Text>
             <View style={[styles.levelBadge, { backgroundColor: levelMeta.backgroundColor }]}>
               <Text style={[styles.levelText, { color: levelMeta.color }]}>
-                {levelMeta.label}
+                {levelMeta.label.toUpperCase()}
               </Text>
             </View>
+            {publicProfile?.home_zone ? (
+              <Text style={styles.heroMuted}>ZONA: {publicProfile.home_zone.toUpperCase()}</Text>
+            ) : null}
           </View>
         </View>
 
         <View style={styles.statsCard}>
           <View style={styles.statsRow}>
-            <StatColumn label="G" value={stats?.wins ?? 0} color="#16a34a" />
-            <StatColumn label="P" value={stats?.losses ?? 0} color="#dc2626" />
-            <StatColumn label="E" value={stats?.draws ?? 0} color="#ca8a04" />
-            <StatColumn label="ELO" value={stats?.elo ?? 0} color="#d97706" />
+            <StatCard label="G" value={stats?.wins ?? 0} color={theme.colors.win} />
+            <StatCard label="P" value={stats?.losses ?? 0} color={theme.colors.loss} />
+            <StatCard label="E" value={stats?.draws ?? 0} color={theme.colors.draw} />
+            <StatCard label="ELO" value={stats?.elo ?? 0} color={theme.colors.gold} />
           </View>
 
-          <View style={styles.winRateRow}>
-            <Text style={styles.winRateLabel}>% victorias</Text>
+          <View style={styles.winRateSection}>
+            <View style={styles.winRateLabelRow}>
+                <Text style={styles.winRateLabel}>WIN RATE</Text>
+                <Text style={styles.winRateValue}>{winRate}%</Text>
+            </View>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${winRate}%` }]} />
             </View>
-            <Text style={styles.winRateValue}>{winRate}%</Text>
           </View>
 
           <View style={styles.infoList}>
-            <Text style={styles.infoText}>
-              Ball: {[request.size, request.surface].filter(Boolean).join(' · ') || 'A coordinar'}
-            </Text>
-            <Text style={styles.infoText}>
-              Run: {(stats?.matches_played ?? 0).toLocaleString('es-CL')} partidos jugados
-            </Text>
+            <View style={styles.infoRow}>
+               <Ionicons name="football-outline" size={14} color={theme.colors.gray} />
+               <Text style={styles.infoText}>
+                 {[request.size, request.surface].filter(Boolean).join(' · ') || 'A coordinar'}
+               </Text>
+            </View>
+            <View style={styles.infoRow}>
+               <Ionicons name="stats-chart-outline" size={14} color={theme.colors.gray} />
+               <Text style={styles.infoText}>
+                 {(stats?.matches_played ?? 0).toLocaleString('es-CL')} partidos jugados
+               </Text>
+            </View>
             {(stats?.win_streak ?? 0) > 0 ? (
-              <Text style={styles.infoText}>Racha de {stats?.win_streak} victorias</Text>
+               <View style={styles.infoRow}>
+                  <Ionicons name="flame-outline" size={14} color={theme.colors.gold} />
+                  <Text style={[styles.infoText, {color: theme.colors.gold}]}>Racha de {stats?.win_streak} victorias</Text>
+               </View>
             ) : null}
           </View>
         </View>
 
-        {publicProfile?.bio || instagramHandle ? (
-          <SectionCard>
-            {publicProfile?.bio ? (
-              <>
-                <Text style={styles.sectionTitle}>Sobre el equipo</Text>
-                <Text style={styles.bodyText}>{publicProfile.bio}</Text>
-              </>
-            ) : null}
-            {instagramHandle ? (
-              <TouchableOpacity
-                style={styles.instagramLink}
-                onPress={() => Linking.openURL(`https://instagram.com/${instagramHandle}`)}
-              >
-                <Ionicons name="logo-instagram" size={18} color="#2563eb" />
-                <Text style={styles.instagramText}>@{instagramHandle}</Text>
-              </TouchableOpacity>
-            ) : null}
-          </SectionCard>
-        ) : null}
-
-        <SectionCard>
-          <Text style={styles.requestTitle}>{request.title}</Text>
-          {request.description ? (
-            <Text style={styles.bodyText}>{request.description}</Text>
-          ) : null}
-          <View style={styles.separator} />
-          {request.preferred_date ? (
-            <DetailRow label="Fecha preferida" value={formatPreferredDate(request.preferred_date)} />
-          ) : null}
-          {request.preferred_time ? (
-            <DetailRow label="Hora" value={request.preferred_time} />
-          ) : null}
-          {request.location_text ? (
-            <DetailRow label="Zona" value={request.location_text} />
-          ) : null}
-          <DetailRow
-            label="Formato"
-            value={[request.size, request.surface].filter(Boolean).join(' · ') || 'A coordinar'}
-          />
-          <Text
-            style={[
-              styles.expirationText,
-              isExpiringSoon(request.expires_at) && styles.expirationSoon,
-            ]}
-          >
-            {isExpiringSoon(request.expires_at) ? 'Expira pronto. ' : ''}
-            Anuncio valido hasta {formatDate(request.expires_at)}
-          </Text>
-        </SectionCard>
-
-        {isOwnRequest ? (
-          <SectionCard>
-            <View style={styles.responsesHeader}>
-              <Text style={styles.sectionTitle}>Equipos interesados</Text>
-              {responses.length > 0 ? (
-                <View style={styles.responsesCount}>
-                  <Text style={styles.responsesCountText}>{responses.length}</Text>
-                </View>
+        <View style={{paddingHorizontal: 16}}>
+          {publicProfile?.bio || instagramHandle ? (
+            <SectionCard>
+              {publicProfile?.bio ? (
+                <>
+                  <SectionHeader title="Sobre el equipo" />
+                  <Text style={styles.bodyText}>{publicProfile.bio}</Text>
+                </>
               ) : null}
+              {instagramHandle ? (
+                <TouchableOpacity
+                  style={styles.instagramLink}
+                  onPress={() => Linking.openURL(`https://instagram.com/${instagramHandle}`)}
+                >
+                  <Ionicons name="logo-instagram" size={18} color={theme.colors.blue} />
+                  <Text style={styles.instagramText}>@{instagramHandle}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </SectionCard>
+          ) : null}
+
+          <SectionCard>
+            <SectionHeader title="Detalles del Anuncio" />
+            <Text style={styles.requestTitle}>{request.title.toUpperCase()}</Text>
+            {request.description ? (
+              <Text style={styles.bodyText}>{request.description}</Text>
+            ) : null}
+            <View style={styles.separator} />
+            {request.preferred_date ? (
+              <DetailRow label="Fecha preferida" value={formatPreferredDate(request.preferred_date)} />
+            ) : null}
+            {request.preferred_time ? (
+              <DetailRow label="Hora" value={request.preferred_time} />
+            ) : null}
+            {request.location_text ? (
+              <DetailRow label="Zona" value={request.location_text} />
+            ) : null}
+            <DetailRow
+              label="Formato"
+              value={[request.size, request.surface].filter(Boolean).join(' · ') || 'A coordinar'}
+            />
+            <View style={styles.expirationContainer}>
+                <Ionicons name="time-outline" size={14} color={isExpiringSoon(request.expires_at) ? theme.colors.loss : theme.colors.gray} />
+                <Text
+                  style={[
+                    styles.expirationText,
+                    isExpiringSoon(request.expires_at) && styles.expirationSoon,
+                  ]}
+                >
+                  {isExpiringSoon(request.expires_at) ? 'Expira pronto. ' : ''}
+                  Valido hasta {formatDate(request.expires_at)}
+                </Text>
             </View>
-            {responses.length === 0 ? (
-              <Text style={styles.emptyHint}>Aun no hay equipos interesados</Text>
-            ) : (
-              responses.map((response) => (
-                <ResponseCard
-                  key={response.id}
-                  response={response}
-                  disabled={isAccepting || isRejecting}
-                  onAccept={() => handleAccept(response.id)}
-                  onReject={() => handleReject(response.id)}
-                />
-              ))
-            )}
           </SectionCard>
-        ) : null}
+
+          {isOwnRequest ? (
+            <View style={{marginTop: 8}}>
+              <View style={styles.responsesHeader}>
+                <SectionHeader title="Equipos Interesados" />
+                {responses.length > 0 ? (
+                  <View style={styles.responsesCount}>
+                    <Text style={styles.responsesCountText}>{responses.length}</Text>
+                  </View>
+                ) : null}
+              </View>
+              {responses.length === 0 ? (
+                <View style={styles.emptyResponses}>
+                    <Text style={styles.emptyHint}>Aun no hay equipos interesados</Text>
+                </View>
+              ) : (
+                responses.map((response) => (
+                  <ResponseCard
+                    key={response.id}
+                    response={response}
+                    disabled={isAccepting || isRejecting}
+                    onAccept={() => handleAccept(response.id)}
+                    onReject={() => handleReject(response.id)}
+                  />
+                ))
+              )}
+            </View>
+          ) : null}
+        </View>
       </ScrollView>
 
       {canPropose ? (
         <View style={styles.bottomBar}>
           {myResponse ? (
-            <>
+            <View style={styles.myResponseContainer}>
               <View style={styles.alreadyBadge}>
-                <Text style={styles.alreadyText}>
-                  Ya propusiste un partido: {RESPONSE_META[myResponse.status].label}
-                </Text>
+                 <Ionicons name="checkmark-circle" size={16} color={theme.colors.win} />
+                 <Text style={styles.alreadyText}>
+                   Propuesta enviada: {RESPONSE_META[myResponse.status].label}
+                 </Text>
               </View>
               <TouchableOpacity style={[styles.submitButton, styles.submitButtonDisabled]} disabled>
-                <Text style={styles.submitText}>Propuesta enviada</Text>
+                <Text style={styles.submitText}>PROPUESTA ENVIADA</Text>
               </TouchableOpacity>
-            </>
+            </View>
           ) : (
             <TouchableOpacity style={styles.submitButton} onPress={() => setShowProposeModal(true)}>
-              <Text style={styles.submitText}>Proponer partido -&gt;</Text>
+              <Text style={styles.submitText}>PROPONER PARTIDO</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -386,10 +415,12 @@ function ResponseCard({
       </View>
       {response.message ? <Text style={styles.responseMessage}>{response.message}</Text> : null}
       {response.proposed_date || response.proposed_time ? (
-        <Text style={styles.responseProposal}>
-          Fecha propuesta:{' '}
-          {[response.proposed_date, response.proposed_time].filter(Boolean).join(' · ')}
-        </Text>
+        <View style={styles.proposalInfo}>
+           <Ionicons name="calendar-outline" size={14} color={theme.colors.gray} />
+           <Text style={styles.responseProposal}>
+             { [response.proposed_date, response.proposed_time].filter(Boolean).join(' · ') }
+           </Text>
+        </View>
       ) : null}
       {response.status === 'pending' ? (
         <View style={styles.responseActions}>
@@ -398,14 +429,14 @@ function ResponseCard({
             onPress={onAccept}
             disabled={disabled}
           >
-            <Text style={styles.acceptButtonText}>Aceptar</Text>
+            <Text style={styles.acceptButtonText}>ACEPTAR</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.rejectButton, disabled && styles.actionDisabled]}
             onPress={onReject}
             disabled={disabled}
           >
-            <Text style={styles.rejectButtonText}>Rechazar</Text>
+            <Text style={styles.rejectButtonText}>RECHAZAR</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -414,201 +445,199 @@ function ResponseCard({
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#f3f4f6', flex: 1 },
+  screen: { backgroundColor: theme.colors.white, flex: 1 },
   scrollContent: { paddingBottom: 112 },
   centeredScreen: {
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.colors.white,
     flex: 1,
     justifyContent: 'center',
     padding: 24,
   },
   hero: {
-    backgroundColor: '#0a3d1f',
-    height: 220,
-    paddingTop: 50,
-  },
-  backButton: {
-    alignItems: 'center',
-    height: 40,
-    justifyContent: 'center',
-    left: 14,
-    position: 'absolute',
-    top: 48,
-    width: 40,
+    backgroundColor: theme.colors.primaryDark,
+    paddingTop: 20,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
   heroContent: { alignItems: 'center', paddingHorizontal: 24 },
   logo: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
-    borderColor: '#f59e0b',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.gold,
     borderRadius: 36,
     borderWidth: 3,
     height: 72,
     justifyContent: 'center',
     width: 72,
   },
-  logoText: { color: '#ffffff', fontSize: 28, fontWeight: '900' },
+  logoText: { color: theme.colors.white, fontSize: 28, fontFamily: theme.fonts.bebas },
   teamName: {
-    color: '#ffffff',
+    color: theme.colors.white,
     fontSize: 28,
-    fontWeight: '900',
-    marginTop: 8,
+    fontFamily: theme.fonts.bebas,
+    marginTop: 12,
     textAlign: 'center',
   },
-  heroMuted: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 4 },
-  heroSubtle: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2 },
-  levelBadge: { borderRadius: 999, marginTop: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  levelText: { fontSize: 12, fontWeight: '800' },
+  heroMuted: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 8, fontFamily: theme.fonts.dmSansBold },
+  levelBadge: { borderRadius: 20, marginTop: 8, paddingHorizontal: 12, paddingVertical: 4 },
+  levelText: { fontSize: 11, fontFamily: theme.fonts.dmSansBold },
   statsCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 4,
-    marginHorizontal: 16,
+    backgroundColor: theme.colors.white,
+    borderRadius: 20,
+    marginHorizontal: 20,
     marginTop: -30,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
+    padding: 20,
+    ...theme.shadow.sm,
   },
-  statsRow: { flexDirection: 'row' },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   statColumn: { alignItems: 'center', flex: 1 },
   statValue: { fontSize: 24, fontWeight: '900' },
   statLabel: { color: '#6b7280', fontSize: 11, fontWeight: '800' },
-  winRateRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 18,
+  winRateSection: {
+    marginTop: 20,
   },
-  winRateLabel: { color: '#6b7280', fontSize: 12, fontWeight: '700' },
+  winRateLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  winRateLabel: { color: theme.colors.gray, fontSize: 11, fontFamily: theme.fonts.dmSansBold },
   progressTrack: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.gray100,
     borderRadius: 4,
-    flex: 1,
     height: 8,
     overflow: 'hidden',
   },
-  progressFill: { backgroundColor: '#16a34a', height: 8 },
-  winRateValue: { color: '#16a34a', fontSize: 13, fontWeight: '900' },
-  infoList: { gap: 6, marginTop: 16 },
-  infoText: { color: '#4b5563', fontSize: 13, fontWeight: '600' },
+  progressFill: { backgroundColor: theme.colors.primary, height: 8 },
+  winRateValue: { color: theme.colors.primary, fontSize: 12, fontFamily: theme.fonts.dmSansBold },
+  infoList: { gap: 8, marginTop: 20 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoText: { color: theme.colors.dark, fontSize: 13, fontFamily: theme.fonts.dmSansBold },
   sectionCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginTop: 14,
-    padding: 16,
+    backgroundColor: theme.colors.white,
+    borderRadius: 20,
+    marginTop: 16,
+    padding: 20,
+    ...theme.shadow.sm,
   },
-  sectionTitle: { color: '#111827', fontSize: 16, fontWeight: '900', marginBottom: 8 },
-  bodyText: { color: '#4b5563', fontSize: 14, lineHeight: 22 },
-  instagramLink: { alignItems: 'center', flexDirection: 'row', gap: 6, marginTop: 12 },
-  instagramText: { color: '#2563eb', fontSize: 14, fontWeight: '800' },
-  requestTitle: { color: '#111827', fontSize: 18, fontWeight: '900', marginBottom: 8 },
-  separator: { backgroundColor: '#e5e7eb', height: 1, marginVertical: 14 },
+  bodyText: { color: theme.colors.gray, fontSize: 14, lineHeight: 22, fontFamily: theme.fonts.dmSans },
+  instagramLink: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 16 },
+  instagramText: { color: theme.colors.blue, fontSize: 14, fontFamily: theme.fonts.dmSansBold },
+  requestTitle: { color: theme.colors.dark, fontSize: 18, fontFamily: theme.fonts.bebas, marginBottom: 8 },
+  separator: { backgroundColor: theme.colors.gray100, height: 1, marginVertical: 16 },
   detailRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
   },
-  detailLabel: { color: '#6b7280', fontSize: 13, fontWeight: '700' },
-  detailValue: { color: '#111827', flex: 1, fontSize: 13, fontWeight: '800', textAlign: 'right' },
-  expirationText: { color: '#6b7280', fontSize: 13, fontWeight: '700', marginTop: 12 },
-  expirationSoon: { color: '#dc2626' },
+  detailLabel: { color: theme.colors.gray, fontSize: 13, fontFamily: theme.fonts.dmSansBold },
+  detailValue: { color: theme.colors.dark, flex: 1, fontSize: 13, fontFamily: theme.fonts.dmSansBold, textAlign: 'right' },
+  expirationContainer: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
+  expirationText: { color: theme.colors.gray, fontSize: 12, fontFamily: theme.fonts.dmSans },
+  expirationSoon: { color: theme.colors.loss, fontFamily: theme.fonts.dmSansBold },
   responsesHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 8,
   },
   responsesCount: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 999,
     height: 24,
     justifyContent: 'center',
     width: 24,
   },
-  responsesCountText: { color: '#ffffff', fontSize: 12, fontWeight: '900' },
-  emptyTitle: { color: '#111827', fontSize: 18, fontWeight: '900', marginTop: 12 },
-  emptyHint: { color: '#6b7280', fontSize: 14, paddingVertical: 18, textAlign: 'center' },
+  responsesCountText: { color: theme.colors.white, fontSize: 12, fontFamily: theme.fonts.dmSansBold },
+  emptyTitle: { color: theme.colors.dark, fontSize: 18, fontFamily: theme.fonts.dmSansBold, marginTop: 12 },
+  emptyResponses: { paddingVertical: 24, alignItems: 'center' },
+  emptyHint: { color: theme.colors.gray, fontSize: 14, fontFamily: theme.fonts.dmSans },
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     marginTop: 16,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
-  primaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '800' },
-  responseCard: { backgroundColor: '#f9fafb', borderRadius: 12, marginBottom: 8, padding: 14 },
+  primaryButtonText: { color: theme.colors.white, fontSize: 14, fontFamily: theme.fonts.dmSansBold },
+  responseCard: { backgroundColor: theme.colors.gray100, borderRadius: 16, marginBottom: 12, padding: 16 },
   responseHeader: { alignItems: 'center', flexDirection: 'row' },
   responseAvatar: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 20,
     height: 40,
     justifyContent: 'center',
     marginRight: 10,
     width: 40,
   },
-  responseAvatarText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
+  responseAvatarText: { color: theme.colors.white, fontSize: 16, fontFamily: theme.fonts.bebas },
   responseBody: { flex: 1 },
-  responseTeam: { color: '#111827', fontSize: 14, fontWeight: '900' },
-  responseDate: { color: '#6b7280', fontSize: 12, marginTop: 2 },
-  responseStatus: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5 },
-  responseStatusText: { fontSize: 11, fontWeight: '900' },
+  responseTeam: { color: theme.colors.dark, fontSize: 14, fontFamily: theme.fonts.dmSansBold },
+  responseDate: { color: theme.colors.gray, fontSize: 12, marginTop: 2, fontFamily: theme.fonts.dmSans },
+  responseStatus: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  responseStatusText: { fontSize: 10, fontFamily: theme.fonts.dmSansBold },
   responseMessage: {
-    color: '#6b7280',
+    color: theme.colors.gray,
     fontSize: 13,
     fontStyle: 'italic',
     lineHeight: 19,
     marginTop: 10,
+    fontFamily: theme.fonts.dmSans,
   },
-  responseProposal: { color: '#4b5563', fontSize: 13, fontWeight: '700', marginTop: 8 },
-  responseActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  proposalInfo: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  responseProposal: { color: theme.colors.dark, fontSize: 13, fontFamily: theme.fonts.dmSansBold },
+  responseActions: { flexDirection: 'row', gap: 8, marginTop: 16 },
   acceptButton: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 10,
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
-  acceptButtonText: { color: '#ffffff', fontSize: 13, fontWeight: '900' },
+  acceptButtonText: { color: theme.colors.white, fontSize: 12, fontFamily: theme.fonts.dmSansBold },
   rejectButton: {
     alignItems: 'center',
-    borderColor: '#dc2626',
+    borderColor: theme.colors.loss,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 11,
   },
-  rejectButtonText: { color: '#dc2626', fontSize: 13, fontWeight: '900' },
+  rejectButtonText: { color: theme.colors.loss, fontSize: 12, fontFamily: theme.fonts.dmSansBold },
   actionDisabled: { opacity: 0.6 },
   bottomBar: {
-    backgroundColor: '#ffffff',
-    borderTopColor: '#e5e7eb',
+    backgroundColor: theme.colors.white,
+    borderTopColor: theme.colors.gray100,
     borderTopWidth: 1,
     bottom: 0,
     left: 0,
     padding: 16,
     position: 'absolute',
     right: 0,
+    ...theme.shadow.sm,
   },
+  myResponseContainer: { gap: 8 },
   alreadyBadge: {
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    backgroundColor: '#dcfce7',
     borderRadius: 10,
-    marginBottom: 10,
-    padding: 10,
+    padding: 8,
+    gap: 6,
   },
-  alreadyText: { color: '#4b5563', fontSize: 13, fontWeight: '800' },
+  alreadyText: { color: theme.colors.win, fontSize: 13, fontFamily: theme.fonts.dmSansBold },
   submitButton: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 14,
     paddingVertical: 16,
   },
   submitButtonDisabled: { opacity: 0.5 },
-  submitText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
+  submitText: { color: theme.colors.white, fontSize: 16, fontFamily: theme.fonts.dmSansBold },
 });

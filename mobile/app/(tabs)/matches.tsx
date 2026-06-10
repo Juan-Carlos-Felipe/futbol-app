@@ -1,3 +1,4 @@
+// ✅ REDISEÑADO con theme.ts
 import { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -11,11 +12,13 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useRouter, Stack } from 'expo-router';
 import { useMyMatches, useCreateMatch, Match, MatchStatus } from '@/hooks/useMatch';
 import { useMyTeams } from '@/hooks/useTeams';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { theme } from '@/lib/theme';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 const STATUS_LABELS: Record<MatchStatus, string> = {
   seeking_opponent: 'Buscando rival',
@@ -132,7 +135,7 @@ export default function MatchesScreen() {
               })
             }
           >
-            <Text style={styles.resultBtnText}>Registrar resultado -&gt;</Text>
+            <Text style={styles.resultBtnText}>Registrar resultado</Text>
           </TouchableOpacity>
         ) : null}
       </TouchableOpacity>
@@ -141,48 +144,57 @@ export default function MatchesScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Partidos</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => {
-            if (!teams?.length) {
-              return Alert.alert('Sin equipos', 'Crea o únete a un equipo primero.');
-            }
-            setSelectedTeamId((teams[0] as { team_id: string }).team_id);
-            setShowCreate(true);
-          }}
-        >
-          <Text style={styles.addBtnText}>+ Crear</Text>
-        </TouchableOpacity>
-      </View>
+      <Stack.Screen options={{
+        title: 'PARTIDOS',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerShown: true
+      }} />
 
-      {isLoading ? (
-        <ActivityIndicator color="#22c55e" style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={matches}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>🗓️</Text>
-              <Text style={styles.emptyText}>No hay partidos aún</Text>
-              <Text style={styles.emptyHint}>
-                Pulsa + Crear para programar un partido y convocar a tu equipo
-              </Text>
-            </View>
-          }
-        />
-      )}
+      <View style={styles.content}>
+        <View style={styles.headerRow}>
+          <SectionHeader title="Mis Partidos" />
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => {
+              if (!teams?.length) {
+                return Alert.alert('Sin equipos', 'Crea o únete a un equipo primero.');
+              }
+              setSelectedTeamId((teams[0] as { team_id: string }).team_id);
+              setShowCreate(true);
+            }}
+          >
+            <Text style={styles.addBtnText}>+ Crear</Text>
+          </TouchableOpacity>
+        </View>
+
+        {isLoading ? (
+          <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />
+        ) : (
+          <FlatList
+            data={matches}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.list}
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <Text style={styles.emptyEmoji}>🗓️</Text>
+                <Text style={styles.emptyText}>No hay partidos aún</Text>
+                <Text style={styles.emptyHint}>
+                  Pulsa + Crear para programar un partido y convocar a tu equipo
+                </Text>
+              </View>
+            }
+          />
+        )}
+      </View>
 
       <Modal visible={showCreate} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modal}>
             <Text style={styles.modalTitle}>Nuevo partido</Text>
             <Text style={styles.modalLabel}>Equipo local</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 16}}>
               {teams?.map((row) => {
                 const team = (Array.isArray(row.teams) ? row.teams[0] : row.teams) as { id: string; name: string };
                 const tid = row.team_id;
@@ -195,7 +207,7 @@ export default function MatchesScreen() {
                     ]}
                     onPress={() => setSelectedTeamId(tid)}
                   >
-                    <Text style={styles.teamChipText}>{team?.name ?? 'Equipo'}</Text>
+                    <Text style={[styles.teamChipText, selectedTeamId === tid && {color: theme.colors.white}]}>{team?.name ?? 'Equipo'}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -203,7 +215,7 @@ export default function MatchesScreen() {
             <TextInput
               style={styles.input}
               placeholder="Lugar (opcional)"
-              placeholderTextColor="#666"
+              placeholderTextColor={theme.colors.gray}
               value={location}
               onChangeText={setLocation}
             />
@@ -228,90 +240,87 @@ export default function MatchesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117' },
+  container: { flex: 1, backgroundColor: theme.colors.white },
+  content: { flex: 1, paddingHorizontal: 24 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 8,
   },
-  title: { fontSize: 24, fontWeight: '800', color: '#fff' },
   addBtn: {
-    backgroundColor: '#22c55e',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
   },
-  addBtnText: { color: '#fff', fontWeight: '700' },
-  list: { padding: 24, paddingTop: 8, flexGrow: 1 },
+  addBtnText: { color: theme.colors.white, fontFamily: theme.fonts.dmSansBold },
+  list: { paddingBottom: 24, flexGrow: 1 },
   card: {
-    backgroundColor: '#1a1d27',
-    borderRadius: 16,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.radius.lg,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#2a2d3a',
+    ...theme.shadow.sm,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  date: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  status: { color: '#22c55e', fontSize: 12, fontWeight: '600' },
-  location: { color: '#888', marginTop: 8, fontSize: 14 },
+  date: { color: theme.colors.dark, fontSize: 16, fontFamily: theme.fonts.dmSansBold },
+  status: { color: theme.colors.primary, fontSize: 12, fontFamily: theme.fonts.dmSansBold },
+  location: { color: theme.colors.gray, marginTop: 8, fontSize: 14, fontFamily: theme.fonts.dmSans },
   resultBtn: {
     alignSelf: 'flex-start',
-    borderColor: '#22c55e',
+    borderColor: theme.colors.primary,
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 1.5,
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
-  resultBtnText: { color: '#22c55e', fontSize: 12, fontWeight: '800' },
+  resultBtnText: { color: theme.colors.primary, fontSize: 12, fontFamily: theme.fonts.dmSansBold },
   empty: { alignItems: 'center', marginTop: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  emptyHint: { color: '#888', marginTop: 4, textAlign: 'center', paddingHorizontal: 24 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  emptyText: { color: theme.colors.dark, fontSize: 18, fontFamily: theme.fonts.dmSansBold },
+  emptyHint: { color: theme.colors.gray, marginTop: 4, textAlign: 'center', paddingHorizontal: 24, fontFamily: theme.fonts.dmSans },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modal: {
-    backgroundColor: '#1a1d27',
+    backgroundColor: theme.colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
+    paddingBottom: 40,
   },
-  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 16 },
-  modalLabel: { color: '#888', fontSize: 12, marginBottom: 8 },
+  modalTitle: { color: theme.colors.dark, fontSize: 18, fontFamily: theme.fonts.dmSansBold, marginBottom: 16 },
+  modalLabel: { color: theme.colors.gray, fontSize: 12, marginBottom: 8, fontFamily: theme.fonts.dmSansBold },
   teamChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#0f1117',
+    backgroundColor: theme.colors.gray100,
     marginRight: 8,
-    marginBottom: 12,
   },
-  teamChipActive: { backgroundColor: '#22c55e' },
-  teamChipText: { color: '#fff', fontWeight: '600' },
+  teamChipActive: { backgroundColor: theme.colors.primary },
+  teamChipText: { color: theme.colors.gray, fontFamily: theme.fonts.dmSansBold },
   input: {
-    backgroundColor: '#0f1117',
-    color: '#fff',
+    backgroundColor: theme.colors.gray100,
+    color: theme.colors.dark,
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#2a2d3a',
+    fontFamily: theme.fonts.dmSans,
   },
-  modalHint: { color: '#666', fontSize: 12, marginBottom: 16 },
+  modalHint: { color: theme.colors.gray, fontSize: 12, marginBottom: 16, fontFamily: theme.fonts.dmSans },
   createBtn: {
-    backgroundColor: '#22c55e',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginBottom: 12,
   },
-  createBtnText: { color: '#fff', fontWeight: '700' },
-  cancel: { color: '#888', textAlign: 'center' },
+  createBtnText: { color: theme.colors.white, fontFamily: theme.fonts.dmSansBold },
+  cancel: { color: theme.colors.gray, textAlign: 'center', fontFamily: theme.fonts.dmSansBold },
 });

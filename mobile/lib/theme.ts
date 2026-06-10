@@ -1,0 +1,40 @@
+export const theme = {
+  colors: {
+    primary: '#16a34a',
+    primaryDark: '#0a3d1f',
+    gold: '#f59e0b',
+    win: '#16a34a',
+    loss: '#dc2626',
+    draw: '#d97706',
+    white: '#ffffff',
+    blue: '#3b82f6',
+    blueBg: '#eff6ff',
+    gray100: '#f3f4f6',
+    black: '#000000',
+    gray: '#666666',
+    dark: '#0A0A0A',
+    card: '#ffffff',
+  },
+  fonts: {
+    bebas: 'BebasNeue_400Regular',
+    dmSans: 'DMSans_400Regular',
+    dmSansMedium: 'DMSans_500Medium',
+    dmSansBold: 'DMSans_700Bold',
+  },
+  radius: {
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
+    full: 9999,
+  },
+  shadow: {
+    sm: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 2,
+    },
+  },
+};

@@ -1,6 +1,7 @@
+// ✅ REDISEÑADO con theme.ts
 import { useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +16,8 @@ import {
 import { useSubmitResult } from '@/hooks/useMatchmaking';
 import { supabase } from '@/lib/supabase';
 import { updatePlayerGoals } from '@/lib/matchmaking';
+import { theme } from '@/lib/theme';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 type TeamInfo = {
   id: string;
@@ -186,35 +189,35 @@ export default function RegisterResultScreen() {
     if (homeGoals === null || awayGoals === null) {
       return {
         title: 'MARCADOR PENDIENTE',
-        color: '#6b7280',
-        backgroundColor: '#f9fafb',
-        borderColor: '#e5e7eb',
+        color: theme.colors.gray,
+        backgroundColor: theme.colors.gray100,
+        borderColor: 'transparent',
       };
     }
 
     if (homeGoals > awayGoals) {
       return {
         title: 'VICTORIA 🏆',
-        color: '#16a34a',
-        backgroundColor: '#f0fdf4',
-        borderColor: '#16a34a',
+        color: theme.colors.win,
+        backgroundColor: '#dcfce7',
+        borderColor: theme.colors.win,
       };
     }
 
     if (homeGoals < awayGoals) {
       return {
         title: 'DERROTA 😤',
-        color: '#dc2626',
-        backgroundColor: '#fef2f2',
-        borderColor: '#dc2626',
+        color: theme.colors.loss,
+        backgroundColor: '#fee2e2',
+        borderColor: theme.colors.loss,
       };
     }
 
     return {
       title: 'EMPATE 🤝',
-      color: '#d97706',
-      backgroundColor: '#fffbeb',
-      borderColor: '#d97706',
+      color: theme.colors.draw,
+      backgroundColor: '#fef3c7',
+      borderColor: theme.colors.draw,
     };
   }, [awayGoals, homeGoals]);
 
@@ -242,7 +245,7 @@ export default function RegisterResultScreen() {
 
     Alert.alert(
       'Confirmar resultado',
-      `Seguro que el resultado fue ${homeGoals} - ${awayGoals}?`,
+      `¿Seguro que el resultado fue ${homeGoals} - ${awayGoals}?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -277,7 +280,7 @@ export default function RegisterResultScreen() {
   if (isLoading) {
     return (
       <View style={styles.centeredScreen}>
-        <ActivityIndicator color="#16a34a" size="large" />
+        <ActivityIndicator color={theme.colors.primary} size="large" />
       </View>
     );
   }
@@ -285,8 +288,8 @@ export default function RegisterResultScreen() {
   if (!isAllowed) {
     return (
       <View style={styles.centeredScreen}>
-        <Ionicons name="lock-closed-outline" size={52} color="#9ca3af" />
-        <Text style={styles.emptyTitle}>Solo el capitan puede registrar el resultado</Text>
+        <Ionicons name="lock-closed-outline" size={52} color={theme.colors.gray100} />
+        <Text style={styles.emptyTitle}>Solo el capitán puede registrar el resultado</Text>
         <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
           <Text style={styles.primaryButtonText}>Volver</Text>
         </TouchableOpacity>
@@ -295,15 +298,24 @@ export default function RegisterResultScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.container}>
+      <Stack.Screen options={{
+        title: 'RESULTADO',
+        headerStyle: { backgroundColor: theme.colors.primaryDark },
+        headerTitleStyle: { fontFamily: theme.fonts.bebas, color: theme.colors.white },
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+        ),
+        headerShown: true
+      }} />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={26} color="#ffffff" />
-          </TouchableOpacity>
           <Text style={styles.headerTitle}>REGISTRAR RESULTADO</Text>
           <Text style={styles.headerSubtitle}>
-            {homeTeam?.name ?? 'Local'} vs {awayTeam?.name ?? 'Rival'}
+            {homeTeam?.name.toUpperCase() ?? 'LOCAL'} VS {awayTeam?.name.toUpperCase() ?? 'RIVAL'}
           </Text>
         </View>
 
@@ -329,16 +341,18 @@ export default function RegisterResultScreen() {
               />
             </View>
 
-            <Stepper
-              value={homeGoals ?? 0}
-              onMinus={() => setGoal('home', (homeGoals ?? 0) - 1)}
-              onPlus={() => setGoal('home', (homeGoals ?? 0) + 1)}
-            />
-            <Stepper
-              value={awayGoals ?? 0}
-              onMinus={() => setGoal('away', (awayGoals ?? 0) - 1)}
-              onPlus={() => setGoal('away', (awayGoals ?? 0) + 1)}
-            />
+            <View style={styles.steppersContainer}>
+              <Stepper
+                value={homeGoals ?? 0}
+                onMinus={() => setGoal('home', (homeGoals ?? 0) - 1)}
+                onPlus={() => setGoal('home', (homeGoals ?? 0) + 1)}
+              />
+              <Stepper
+                value={awayGoals ?? 0}
+                onMinus={() => setGoal('away', (awayGoals ?? 0) - 1)}
+                onPlus={() => setGoal('away', (awayGoals ?? 0) + 1)}
+              />
+            </View>
           </View>
 
           <TeamColumn team={awayTeam} badge="VISITANTE" variant="away" />
@@ -355,7 +369,7 @@ export default function RegisterResultScreen() {
         >
           <Text style={[styles.previewTitle, { color: preview.color }]}>{preview.title}</Text>
           <Text style={styles.previewText}>
-            El resultado actualiza automaticamente las estadisticas de ambos equipos y el
+            El resultado actualizará automáticamente las estadísticas de ambos equipos y el
             ranking ELO.
           </Text>
         </View>
@@ -363,54 +377,54 @@ export default function RegisterResultScreen() {
         <View style={styles.scorersCard}>
           <View style={styles.switchRow}>
             <View style={styles.switchText}>
-              <Text style={styles.sectionTitle}>Agregar goleadores?</Text>
+              <SectionHeader title="¿Agregar Goleadores?" />
               <Text style={styles.helperText}>Opcional, solo jugadores confirmados.</Text>
             </View>
             <Switch
               value={addScorers}
               onValueChange={setAddScorers}
-              trackColor={{ false: '#d1d5db', true: '#bbf7d0' }}
-              thumbColor={addScorers ? '#16a34a' : '#f9fafb'}
+              trackColor={{ false: theme.colors.gray100, true: '#bbf7d0' }}
+              thumbColor={addScorers ? theme.colors.primary : theme.colors.white}
             />
           </View>
 
           {addScorers ? (
             players.length === 0 ? (
-              <Text style={styles.helperText}>No hay jugadores confirmados para este partido.</Text>
+              <Text style={styles.noPlayersText}>No hay jugadores confirmados para este partido.</Text>
             ) : (
-              players.map((player) => (
-                <View key={player.userId} style={styles.playerRow}>
-                  <Text style={styles.playerName}>{player.name}</Text>
-                  <Stepper
-                    value={getScorerGoals(player.userId)}
-                    max={9}
-                    onMinus={() =>
-                      setScorerGoals(player.userId, getScorerGoals(player.userId) - 1)
-                    }
-                    onPlus={() =>
-                      setScorerGoals(player.userId, getScorerGoals(player.userId) + 1)
-                    }
-                  />
-                </View>
-              ))
+              <View style={styles.playersList}>
+                {players.map((player) => (
+                  <View key={player.userId} style={styles.playerRow}>
+                    <Text style={styles.playerName}>{player.name}</Text>
+                    <Stepper
+                      value={getScorerGoals(player.userId)}
+                      max={9}
+                      onMinus={() =>
+                        setScorerGoals(player.userId, getScorerGoals(player.userId) - 1)
+                      }
+                      onPlus={() =>
+                        setScorerGoals(player.userId, getScorerGoals(player.userId) + 1)
+                      }
+                    />
+                  </View>
+                ))}
+              </View>
             )
           ) : null}
         </View>
-      </ScrollView>
 
-      <View style={styles.bottomBar}>
         <TouchableOpacity
           style={[styles.confirmButton, !canSubmit && styles.confirmButtonDisabled]}
           onPress={confirmResult}
           disabled={!canSubmit}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={theme.colors.white} />
           ) : (
-            <Text style={styles.confirmButtonText}>Confirmar resultado</Text>
+            <Text style={styles.confirmButtonText}>CONFIRMAR RESULTADO</Text>
           )}
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -430,7 +444,7 @@ function TeamColumn({
         <Text style={styles.teamAvatarText}>{getInitial(team?.name ?? 'Equipo')}</Text>
       </View>
       <Text style={styles.teamName} numberOfLines={2}>
-        {team?.name ?? 'Equipo'}
+        {team?.name.toUpperCase() ?? 'EQUIPO'}
       </Text>
       <View style={styles.teamBadge}>
         <Text style={styles.teamBadgeText}>{badge}</Text>
@@ -453,135 +467,136 @@ function Stepper({
   return (
     <View style={styles.stepper}>
       <TouchableOpacity style={[styles.stepButton, styles.minusButton]} onPress={onMinus}>
-        <Text style={styles.stepButtonText}>-</Text>
+        <Ionicons name="remove" size={20} color={theme.colors.white} />
       </TouchableOpacity>
-      <Text style={styles.stepValue}>{Math.min(value, max).toLocaleString('es-CL')}</Text>
+      <View style={styles.stepValueContainer}>
+         <Text style={styles.stepValue}>{Math.min(value, max)}</Text>
+      </View>
       <TouchableOpacity style={[styles.stepButton, styles.plusButton]} onPress={onPlus}>
-        <Text style={styles.stepButtonText}>+</Text>
+        <Ionicons name="add" size={20} color={theme.colors.white} />
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#f3f4f6', flex: 1 },
-  scrollContent: { paddingBottom: 112 },
+  container: { flex: 1, backgroundColor: theme.colors.white },
+  scrollContent: { paddingBottom: 40 },
   centeredScreen: {
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.colors.white,
     flex: 1,
     justifyContent: 'center',
     padding: 24,
   },
-  header: { backgroundColor: '#0a3d1f', height: 160, paddingHorizontal: 16, paddingTop: 50 },
-  backButton: {
-    alignItems: 'center',
-    height: 40,
-    justifyContent: 'center',
-    left: 10,
-    position: 'absolute',
-    top: 48,
-    width: 40,
+  header: {
+    backgroundColor: theme.colors.primaryDark,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  headerTitle: { color: '#ffffff', fontSize: 28, fontWeight: '900', marginLeft: 36 },
-  headerSubtitle: { color: '#ffffff', fontSize: 16, fontWeight: '700', marginLeft: 36, marginTop: 6 },
+  headerTitle: { color: theme.colors.white, fontSize: 32, fontFamily: theme.fonts.bebas },
+  headerSubtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontFamily: theme.fonts.dmSansBold, marginTop: 4 },
   scoreCard: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.colors.white,
     borderRadius: 20,
-    elevation: 4,
     flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: -20,
-    padding: 22,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
+    marginHorizontal: 20,
+    marginTop: -30,
+    padding: 20,
+    ...theme.shadow.sm,
   },
   teamColumn: { alignItems: 'center', flex: 1 },
   teamAvatar: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 26,
     height: 52,
     justifyContent: 'center',
     width: 52,
   },
-  awayAvatar: { backgroundColor: '#6b7280' },
-  teamAvatarText: { color: '#ffffff', fontSize: 20, fontWeight: '900' },
+  awayAvatar: { backgroundColor: theme.colors.gray },
+  teamAvatarText: { color: theme.colors.white, fontSize: 20, fontFamily: theme.fonts.bebas },
   teamName: {
-    color: '#111827',
+    color: theme.colors.dark,
     fontSize: 14,
-    fontWeight: '900',
+    fontFamily: theme.fonts.bebas,
     marginTop: 8,
-    minHeight: 36,
+    minHeight: 20,
     textAlign: 'center',
   },
-  teamBadge: { backgroundColor: '#f3f4f6', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
-  teamBadgeText: { color: '#6b7280', fontSize: 10, fontWeight: '900' },
-  scoreColumn: { alignItems: 'center', flex: 1.15, gap: 8 },
-  scoreInputRow: { alignItems: 'center', flexDirection: 'row' },
+  teamBadge: { backgroundColor: theme.colors.gray100, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginTop: 4 },
+  teamBadgeText: { color: theme.colors.gray, fontSize: 10, fontFamily: theme.fonts.dmSansBold },
+  scoreColumn: { alignItems: 'center', flex: 1.2 },
+  scoreInputRow: { alignItems: 'center', flexDirection: 'row', marginBottom: 12 },
   goalInput: {
-    borderBottomColor: '#9ca3af',
-    borderBottomWidth: 2,
-    fontSize: 52,
-    fontWeight: '900',
+    fontSize: 48,
+    fontFamily: theme.fonts.bebas,
     padding: 0,
     textAlign: 'center',
-    width: 70,
+    width: 60,
   },
-  homeGoalInput: { color: '#16a34a' },
-  awayGoalInput: { color: '#dc2626' },
-  scoreDash: { color: '#9ca3af', fontSize: 36, fontWeight: '900', marginHorizontal: 4 },
-  stepper: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  homeGoalInput: { color: theme.colors.win },
+  awayGoalInput: { color: theme.colors.loss },
+  scoreDash: { color: theme.colors.gray100, fontSize: 32, fontFamily: theme.fonts.bebas, marginHorizontal: 4 },
+  steppersContainer: { gap: 8 },
+  stepper: { alignItems: 'center', flexDirection: 'row', gap: 12 },
   stepButton: {
     alignItems: 'center',
-    borderRadius: 18,
-    height: 36,
+    borderRadius: 8,
+    height: 32,
     justifyContent: 'center',
-    width: 36,
+    width: 32,
   },
-  minusButton: { backgroundColor: '#dc2626' },
-  plusButton: { backgroundColor: '#16a34a' },
-  stepButtonText: { color: '#ffffff', fontSize: 22, fontWeight: '900', lineHeight: 24 },
-  stepValue: { color: '#111827', fontSize: 16, fontWeight: '900', minWidth: 18, textAlign: 'center' },
+  minusButton: { backgroundColor: theme.colors.loss },
+  plusButton: { backgroundColor: theme.colors.win },
+  stepValueContainer: { minWidth: 20, alignItems: 'center' },
+  stepValue: { color: theme.colors.dark, fontSize: 16, fontFamily: theme.fonts.dmSansBold },
   previewCard: {
     borderRadius: 16,
-    borderWidth: 1,
-    marginHorizontal: 16,
-    marginTop: 14,
-    padding: 16,
+    borderWidth: 1.5,
+    marginHorizontal: 24,
+    marginTop: 24,
+    padding: 20,
+    alignItems: 'center',
   },
-  previewTitle: { fontSize: 24, fontWeight: '900', textAlign: 'center' },
-  previewText: { color: '#6b7280', fontSize: 12, lineHeight: 18, marginTop: 8, textAlign: 'center' },
-  scorersCard: { backgroundColor: '#ffffff', borderRadius: 16, marginHorizontal: 16, marginTop: 14, padding: 16 },
-  switchRow: { alignItems: 'center', flexDirection: 'row' },
+  previewTitle: { fontSize: 24, fontFamily: theme.fonts.bebas, textAlign: 'center' },
+  previewText: { color: theme.colors.gray, fontSize: 12, lineHeight: 18, marginTop: 8, textAlign: 'center', fontFamily: theme.fonts.dmSans },
+  scorersCard: {
+    backgroundColor: theme.colors.white,
+    borderRadius: 20,
+    marginHorizontal: 24,
+    marginTop: 24,
+    padding: 20,
+    ...theme.shadow.sm,
+  },
+  switchRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   switchText: { flex: 1 },
-  sectionTitle: { color: '#111827', fontSize: 16, fontWeight: '900' },
-  helperText: { color: '#6b7280', fontSize: 12, lineHeight: 18, marginTop: 4 },
-  playerRow: { alignItems: 'center', borderTopColor: '#f3f4f6', borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10 },
-  playerName: { color: '#111827', flex: 1, fontSize: 14, fontWeight: '800' },
-  bottomBar: {
-    backgroundColor: '#ffffff',
-    borderTopColor: '#e5e7eb',
-    borderTopWidth: 1,
-    bottom: 0,
-    left: 0,
-    padding: 16,
-    position: 'absolute',
-    right: 0,
+  helperText: { color: theme.colors.gray, fontSize: 12, fontFamily: theme.fonts.dmSans, marginTop: -8, marginBottom: 12 },
+  playersList: { marginTop: 12 },
+  playerRow: { alignItems: 'center', borderTopColor: theme.colors.gray100, borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12 },
+  playerName: { color: theme.colors.dark, flex: 1, fontSize: 14, fontFamily: theme.fonts.dmSansBold },
+  noPlayersText: { color: theme.colors.gray, fontSize: 12, fontFamily: theme.fonts.dmSans, textAlign: 'center', marginTop: 12 },
+  confirmButton: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    paddingVertical: 18,
+    marginHorizontal: 24,
+    marginTop: 32,
   },
-  confirmButton: { alignItems: 'center', backgroundColor: '#16a34a', borderRadius: 14, paddingVertical: 16 },
-  confirmButtonDisabled: { opacity: 0.55 },
-  confirmButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
-  emptyTitle: { color: '#111827', fontSize: 18, fontWeight: '900', marginTop: 12, textAlign: 'center' },
+  confirmButtonDisabled: { opacity: 0.6 },
+  confirmButtonText: { color: theme.colors.white, fontSize: 16, fontFamily: theme.fonts.dmSansBold },
+  emptyTitle: { color: theme.colors.dark, fontSize: 18, fontFamily: theme.fonts.dmSansBold, marginTop: 12, textAlign: 'center' },
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     marginTop: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
-  primaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '900' },
+  primaryButtonText: { color: theme.colors.white, fontSize: 14, fontFamily: theme.fonts.dmSansBold },
 });

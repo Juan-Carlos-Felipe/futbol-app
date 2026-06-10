@@ -1,3 +1,4 @@
+// ✅ REDISEÑADO con theme.ts
 import { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -10,6 +11,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { theme } from '@/lib/theme';
 
 export default function PaymentResultScreen() {
   const { paymentId, status: rawStatus } = useLocalSearchParams<{
@@ -85,7 +87,7 @@ export default function PaymentResultScreen() {
   if (isUpdating) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -96,58 +98,66 @@ export default function PaymentResultScreen() {
         return (
           <>
             <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-              <Ionicons name="checkmark-circle" size={90} color="#16a34a" />
+              <View style={styles.iconCircle}>
+                <Ionicons name="checkmark" size={60} color={theme.colors.white} />
+              </View>
             </Animated.View>
-            <Text style={[styles.title, { color: '#16a34a' }]}>
-              ¡Pago registrado!
+            <Text style={styles.title}>
+              ¡PAGO EXITOSO!
             </Text>
             <Text style={styles.subtitle}>
-              Tu parte está pagada. Cuando todos paguen, la cancha queda confirmada.
+              Tu parte ha sido registrada correctamente. Cuando todos los jugadores paguen, la reserva quedará confirmada automáticamente.
             </Text>
-            {reservationId ? (
+
+            <View style={styles.actions}>
+              {reservationId ? (
+                <TouchableOpacity
+                  style={styles.primaryButton}
+                  onPress={() =>
+                    router.replace('/reserva/estado/' + reservationId as any)
+                  }
+                >
+                  <Text style={styles.primaryButtonText}>VER ESTADO DE RESERVA</Text>
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#16a34a' }]}
-                onPress={() =>
-                  router.replace('/reserva/estado/' + reservationId as any)
-                }
+                style={styles.ghostButton}
+                onPress={() => router.replace('/(tabs)/feed')}
               >
-                <Text style={styles.buttonText}>Ver estado de la reserva</Text>
+                <Text style={styles.ghostButtonText}>
+                  VOLVER AL INICIO
+                </Text>
               </TouchableOpacity>
-            ) : null}
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
-              onPress={() => router.replace('/(tabs)/canchas' as any)}
-            >
-              <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-                Ir a canchas
-              </Text>
-            </TouchableOpacity>
+            </View>
           </>
         );
 
       case 'failure':
         return (
           <>
-            <Ionicons name="close-circle" size={90} color="#dc2626" />
-            <Text style={[styles.title, { color: '#dc2626' }]}>
-              El pago falló
+            <View style={[styles.iconCircle, { backgroundColor: theme.colors.loss }]}>
+              <Ionicons name="close" size={60} color={theme.colors.white} />
+            </View>
+            <Text style={[styles.title, { color: theme.colors.white }]}>
+              EL PAGO FALLÓ
             </Text>
-            <Text style={styles.subtitle}>
-              Podés intentarlo de nuevo.
+            <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.7)' }]}>
+              Hubo un problema al procesar tu pago. Podés volver a intentarlo o elegir otro método.
             </Text>
-            <View style={styles.buttonRow}>
+
+            <View style={styles.actions}>
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#dc2626' }]}
+                style={[styles.primaryButton, { backgroundColor: theme.colors.white }]}
                 onPress={() => router.back()}
               >
-                <Text style={styles.buttonText}>Reintentar</Text>
+                <Text style={[styles.primaryButtonText, { color: theme.colors.primaryDark }]}>REINTENTAR PAGO</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, styles.secondaryButton]}
+                style={styles.ghostButton}
                 onPress={() => router.replace('/(tabs)/canchas' as any)}
               >
-                <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-                  Cancelar
+                <Text style={[styles.ghostButtonText, { color: 'rgba(255,255,255,0.8)' }]}>
+                  CANCELAR
                 </Text>
               </TouchableOpacity>
             </View>
@@ -158,21 +168,23 @@ export default function PaymentResultScreen() {
       default:
         return (
           <>
-            <Ionicons name="time" size={90} color="#d97706" />
-            <Text style={[styles.title, { color: '#d97706' }]}>
-              Pago en proceso
+             <View style={[styles.iconCircle, { backgroundColor: theme.colors.draw }]}>
+              <Ionicons name="time-outline" size={60} color={theme.colors.white} />
+            </View>
+            <Text style={[styles.title, { color: theme.colors.white }]}>
+              PAGO PENDIENTE
             </Text>
-            <Text style={styles.subtitle}>
-              Te avisaremos cuando se confirme.
+            <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.7)' }]}>
+              Estamos procesando tu pago. Te avisaremos apenas tengamos la confirmación.
             </Text>
             {reservationId ? (
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#d97706' }]}
+                style={styles.primaryButton}
                 onPress={() =>
                   router.replace('/reserva/estado/' + reservationId as any)
                 }
               >
-                <Text style={styles.buttonText}>Ver estado</Text>
+                <Text style={styles.primaryButtonText}>VER ESTADO</Text>
               </TouchableOpacity>
             ) : null}
           </>
@@ -181,7 +193,7 @@ export default function PaymentResultScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, status === 'success' ? styles.successBg : styles.otherBg]}>
       <View style={styles.content}>{renderContent()}</View>
     </View>
   );
@@ -190,48 +202,69 @@ export default function PaymentResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+  },
+  successBg: {
+    backgroundColor: theme.colors.primaryDark,
+  },
+  otherBg: {
+    backgroundColor: theme.colors.primaryDark,
   },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 16,
+    paddingHorizontal: 32,
+    gap: 20,
+  },
+  iconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    ...theme.shadow.sm,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 32,
+    fontFamily: theme.fonts.bebas,
     textAlign: 'center',
+    color: theme.colors.white,
   },
   subtitle: {
-    color: '#6b7280',
-    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 24,
+    fontFamily: theme.fonts.dmSans,
+    marginBottom: 20,
   },
-  button: {
+  actions: {
     width: '100%',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    gap: 12,
+  },
+  primaryButton: {
+    width: '100%',
+    paddingVertical: 18,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
+    backgroundColor: theme.colors.primary,
   },
-  secondaryButton: {
+  primaryButtonText: {
+    color: theme.colors.white,
+    fontSize: 14,
+    fontFamily: theme.fonts.dmSansBold,
+  },
+  ghostButton: {
+    width: '100%',
+    paddingVertical: 16,
+    alignItems: 'center',
     backgroundColor: 'transparent',
   },
-  buttonText: {
-    color: '#ffffff',
+  ghostButtonText: {
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
-    fontWeight: '700',
-  },
-  secondaryButtonText: {
-    color: '#6b7280',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
+    fontFamily: theme.fonts.dmSansBold,
   },
 });
