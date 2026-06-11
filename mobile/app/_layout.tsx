@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from '@expo-google-fonts/poppins';
 import { useAuth } from '@/hooks/useAuth';
+import { colors } from '@/lib/theme';
 
 const queryClient = new QueryClient();
 
@@ -29,7 +31,7 @@ function RootLayoutNav() {
       <Stack screenOptions={{ headerShown: false }} />
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#22c55e" />
+          <ActivityIndicator size="large" color={colors.accent} />
         </View>
       )}
     </>
@@ -39,13 +41,29 @@ function RootLayoutNav() {
 const styles = StyleSheet.create({
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0f1117',
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
 });
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loadingOverlay}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <RootLayoutNav />

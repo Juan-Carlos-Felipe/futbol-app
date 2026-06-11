@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, font, radii } from '@/lib/theme';
 
 const TAB_OPTIONS = {
   canchas: {
@@ -59,20 +60,25 @@ export default function TabLayout() {
             <Ionicons name={options.icon} size={19} color={color} />
           ),
           tabBarStyle: {
-            backgroundColor: '#0f1117',
-            borderTopColor: '#1a1d27',
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+            borderTopWidth: 1,
             height: 64 + bottomInset,
             paddingBottom: bottomInset + 6,
             paddingTop: 6,
+            marginHorizontal: 14,
+            marginBottom: Platform.OS === 'android' ? 6 : 0,
+            borderRadius: radii.xl,
+            position: 'absolute',
           },
-          tabBarItemStyle: { borderRadius: 10, minWidth: 0 },
-          tabBarLabelStyle: { fontSize: 9, fontWeight: '700' },
+          tabBarItemStyle: { borderRadius: 14, minWidth: 0 },
+          tabBarLabelStyle: { fontFamily: font.semiBold, fontSize: 9 },
           tabBarIconStyle: { marginBottom: -2 },
-          tabBarActiveTintColor: '#22c55e',
-          tabBarInactiveTintColor: '#888',
-          headerStyle: { backgroundColor: '#0f1117' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
+          tabBarActiveTintColor: colors.accent,
+          tabBarInactiveTintColor: colors.textSubtle,
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.white,
+          headerTitleStyle: { fontFamily: font.bold },
         };
       }}
     />

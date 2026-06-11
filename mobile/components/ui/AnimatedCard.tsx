@@ -6,6 +6,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { colors, radii, shadows } from '@/lib/theme';
 
 type AnimatedCardProps = {
   children: React.ReactNode;
@@ -48,12 +49,11 @@ export function AnimatedCard({ children, delay = 0, style }: AnimatedCardProps) 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 3,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    ...shadows.card,
   },
 });

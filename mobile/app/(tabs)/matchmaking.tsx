@@ -19,6 +19,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { useMatchRequests, useMyTeamRequests } from '@/hooks/useMatchmaking';
 import type { MatchRequest, MatchRequestFilters } from '@/lib/matchmaking';
 import { supabase } from '@/lib/supabase';
+import { colors, font, radii, shadows, spacing } from '@/lib/theme';
 
 type BoardMode = 'search' | 'mine';
 
@@ -40,10 +41,10 @@ const STATUS_META: Record<
   MatchRequest['status'],
   { label: string; backgroundColor: string; color: string }
 > = {
-  open: { label: 'Abierto', backgroundColor: '#dbeafe', color: '#2563eb' },
-  matched: { label: 'Partido acordado', backgroundColor: '#dcfce7', color: '#16a34a' },
-  cancelled: { label: 'Cancelado', backgroundColor: '#fee2e2', color: '#dc2626' },
-  expired: { label: 'Expirado', backgroundColor: '#f3f4f6', color: '#6b7280' },
+  open: { label: 'Abierto', backgroundColor: '#D2B5FF22', color: colors.accent },
+  matched: { label: 'Partido acordado', backgroundColor: '#33d69f22', color: colors.success },
+  cancelled: { label: 'Cancelado', backgroundColor: '#ff6b7a22', color: colors.danger },
+  expired: { label: 'Expirado', backgroundColor: colors.surfaceSoft, color: colors.textSubtle },
 };
 
 function isSameFilter(current: MatchRequestFilters, next: MatchRequestFilters) {
@@ -332,12 +333,12 @@ export default function MatchmakingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: '#f3f4f6', flex: 1 },
+  container: { backgroundColor: colors.background, flex: 1 },
   header: {
-    backgroundColor: '#0a3d1f',
+    backgroundColor: colors.background,
     paddingBottom: 18,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 24,
   },
   headerTop: {
     alignItems: 'center',
@@ -347,14 +348,15 @@ const styles = StyleSheet.create({
   },
   headerText: { flex: 1 },
   headerTitle: {
-    color: '#ffffff',
+    color: colors.white,
+    fontFamily: font.extraBold,
     fontSize: 28,
     fontWeight: '900',
     letterSpacing: 0,
   },
-  headerSubtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
+  headerSubtitle: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 14, marginTop: 4 },
   modeToggle: {
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: colors.surface,
     borderRadius: 999,
     flexDirection: 'row',
     padding: 4,
@@ -366,38 +368,38 @@ const styles = StyleSheet.create({
     width: 38,
   },
   modeButton: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7 },
-  modeButtonActive: { backgroundColor: '#ffffff' },
-  modeText: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '800' },
-  modeTextActive: { color: '#0a3d1f' },
+  modeButtonActive: { backgroundColor: colors.accent },
+  modeText: { color: colors.textSubtle, fontFamily: font.bold, fontSize: 12, fontWeight: '800' },
+  modeTextActive: { color: colors.background },
   searchTools: {
-    backgroundColor: '#ffffff',
-    borderBottomColor: '#e5e7eb',
+    backgroundColor: colors.background,
+    borderBottomColor: colors.border,
     borderBottomWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   searchInputWrap: {
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 12,
   },
-  searchInput: { color: '#111827', flex: 1, fontSize: 14, paddingVertical: 11 },
+  searchInput: { color: colors.white, flex: 1, fontFamily: font.regular, fontSize: 14, paddingVertical: 11 },
   filtersContent: { flexDirection: 'row', gap: 8, paddingTop: 12 },
   chip: {
-    backgroundColor: '#f3f4f6',
-    borderColor: '#e5e7eb',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 13,
     paddingVertical: 7,
   },
-  chipActive: { backgroundColor: '#16a34a', borderColor: '#16a34a' },
-  chipText: { color: '#6b7280', fontSize: 13, fontWeight: '700' },
-  chipTextActive: { color: '#ffffff' },
-  counterText: { color: '#6b7280', fontSize: 13, fontWeight: '700', marginTop: 12 },
+  chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  chipText: { color: colors.textSubtle, fontFamily: font.bold, fontSize: 13, fontWeight: '700' },
+  chipTextActive: { color: colors.background },
+  counterText: { color: colors.textSubtle, fontFamily: font.bold, fontSize: 13, fontWeight: '700', marginTop: 12 },
   content: { flex: 1 },
   listContent: { flexGrow: 1, padding: 16, paddingBottom: 96 },
   centered: {
@@ -407,37 +409,37 @@ const styles = StyleSheet.create({
     padding: 28,
   },
   emptyTitle: {
-    color: '#111827',
+    color: colors.white,
+    fontFamily: font.bold,
     fontSize: 18,
     fontWeight: '800',
     marginTop: 12,
     textAlign: 'center',
   },
   emptySubtitle: {
-    color: '#6b7280',
+    color: colors.textSubtle,
+    fontFamily: font.regular,
     fontSize: 14,
     lineHeight: 20,
     marginTop: 6,
     textAlign: 'center',
   },
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     marginTop: 16,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
-  primaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '800' },
+  primaryButtonText: { color: colors.background, fontFamily: font.bold, fontSize: 14, fontWeight: '800' },
   myCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 3,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
     marginBottom: 12,
     padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    ...shadows.card,
   },
   myCardHeader: {
     alignItems: 'flex-start',
@@ -446,22 +448,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   myCardText: { flex: 1 },
-  myCardTitle: { color: '#111827', fontSize: 16, fontWeight: '800' },
-  myCardDescription: { color: '#6b7280', fontSize: 13, lineHeight: 18, marginTop: 5 },
+  myCardTitle: { color: colors.white, fontFamily: font.bold, fontSize: 16, fontWeight: '800' },
+  myCardDescription: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 13, lineHeight: 18, marginTop: 5 },
   statusBadge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   statusText: { fontSize: 11, fontWeight: '800' },
   responsesButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#D2B5FF22',
     borderRadius: 8,
     marginTop: 12,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
-  responsesButtonText: { color: '#2563eb', fontSize: 13, fontWeight: '800' },
+  responsesButtonText: { color: colors.accent, fontFamily: font.bold, fontSize: 13, fontWeight: '800' },
   fab: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.accent,
     borderRadius: 28,
     bottom: 24,
     elevation: 5,
@@ -475,7 +477,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     width: 56,
   },
-  fabText: { color: '#ffffff', fontSize: 34, fontWeight: '600', lineHeight: 38 },
+  fabText: { color: colors.background, fontFamily: font.bold, fontSize: 34, fontWeight: '600', lineHeight: 38 },
   animatedListCard: {
     backgroundColor: 'transparent',
     elevation: 0,

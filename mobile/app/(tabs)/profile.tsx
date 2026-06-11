@@ -29,6 +29,8 @@ import {
   type AvatarConfig,
 } from '@/lib/avatar';
 import { getFifaRating } from '@/lib/elo';
+import { colors, font, radii, shadows, spacing } from '@/lib/theme';
+import { SectionTitle, SportCard, StatPill } from '@/components/ui/SportPrimitives';
 
 const SKILLS = [
   { key: 'attack', label: 'Ataque', icon: 'ATQ' },
@@ -118,12 +120,20 @@ export default function ProfileScreen() {
               avatarUrl={avatarConfig.avatarUrl}
               pose={avatarConfig.selectedPose}
               teamColor={avatarConfig.teamColor}
+              customization={avatarConfig.customization}
+              avatarName={avatarConfig.avatarName}
               width={160}
               height={240}
               autoRotate
+              showControls={false}
             />
           ) : (
-            <AvatarPlaceholder size="lg" teamColor={avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR} />
+            <AvatarPlaceholder
+              size="lg"
+              teamColor={avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR}
+              customization={avatarConfig?.customization}
+              label={avatarConfig?.avatarName}
+            />
           )}
           <View style={styles.ratingOverlay}>
             <AnimatedNumber value={fifaRating} style={styles.ratingOverlayValue} />
@@ -167,7 +177,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.statsCard}>
-        <Text style={styles.statsEyebrow}>MIS STATS</Text>
+        <Text style={styles.statsEyebrow}>PLAYER CARD</Text>
         <View style={styles.ratingRow}>
           <View style={styles.fifaRatingCard}>
             <AnimatedNumber value={fifaRating} style={styles.fifaRating} />
@@ -191,7 +201,7 @@ export default function ProfileScreen() {
         <Text style={styles.eloHint}>Ranking personal basado en tus resultados</Text>
       </View>
 
-      <View style={styles.teamStatsCard}>
+      <SportCard style={styles.teamStatsCard}>
         <View style={styles.teamStatsHeader}>
           <Text style={styles.sectionTitle}>Mi equipo</Text>
           {teamRankingPosition > 0 ? (
@@ -204,10 +214,10 @@ export default function ProfileScreen() {
           <StatTile label="Empates" value={teamStats?.draws ?? 0} color="#f59e0b" />
         </View>
         <ProgressRow label="Win rate del equipo" value={teamWinRate} />
-      </View>
+      </SportCard>
 
-      <View style={styles.teamStatsCard}>
-        <Text style={styles.sectionTitle}>Forma reciente</Text>
+      <SportCard style={styles.teamStatsCard}>
+        <SectionTitle title="Forma reciente" />
         <View style={styles.formDots}>
           {form.length > 0 ? (
             form.map((result, index) => <FormDot key={`${result}-${index}`} result={result} />)
@@ -216,17 +226,17 @@ export default function ProfileScreen() {
           )}
         </View>
         <Text style={styles.formHint}>Ultimos 5 partidos</Text>
-      </View>
+      </SportCard>
 
       {activeTeamId ? (
-        <View style={styles.teamStatsCard}>
-          <Text style={styles.sectionTitle}>Historial ELO</Text>
+        <SportCard style={styles.teamStatsCard}>
+          <SectionTitle title="Historial ELO" />
           <EloHistoryList teamId={activeTeamId} />
-        </View>
+        </SportCard>
       ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Habilidades</Text>
+      <SportCard style={styles.section}>
+        <SectionTitle title="Habilidades" />
         {SKILLS.map(({ key, label, icon }) => (
           <View key={key} style={styles.skillRow}>
             <Text style={styles.skillLabel}>
@@ -239,7 +249,7 @@ export default function ProfileScreen() {
           </View>
         ))}
         <Text style={styles.skillNote}>Las habilidades suben con la actividad en partidos</Text>
-      </View>
+      </SportCard>
 
       <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
         <Text style={styles.logoutText}>Cerrar sesion</Text>
@@ -301,18 +311,19 @@ function FormDot({ result }: { result: 'win' | 'draw' | 'loss' }) {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: '#0f1117', flex: 1 },
-  content: { padding: 24, paddingBottom: 36 },
+  container: { backgroundColor: colors.background, flex: 1 },
+  content: { padding: spacing.lg, paddingBottom: 120 },
   centered: { alignItems: 'center', justifyContent: 'center' },
   avatarHero: {
     alignItems: 'center',
-    backgroundColor: '#08130d',
-    borderColor: '#1f3f2c',
-    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 28,
     borderWidth: 1,
     marginBottom: 24,
     overflow: 'hidden',
     paddingTop: 12,
+    ...shadows.card,
   },
   avatarStage: {
     alignItems: 'center',
@@ -322,7 +333,7 @@ const styles = StyleSheet.create({
   },
   ratingOverlay: {
     alignItems: 'center',
-    backgroundColor: '#f59e0b',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     bottom: 18,
     left: 24,
@@ -331,25 +342,25 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     position: 'absolute',
   },
-  ratingOverlayValue: { color: '#78350f', fontSize: 28, fontWeight: '900' },
-  ratingOverlayLabel: { color: '#78350f', fontSize: 10, fontWeight: '900' },
+  ratingOverlayValue: { color: colors.background, fontFamily: font.extraBold, fontSize: 28, fontWeight: '900' },
+  ratingOverlayLabel: { color: colors.background, fontFamily: font.extraBold, fontSize: 10, fontWeight: '900' },
   editAvatarButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#D2B5FF22',
     borderRadius: 999,
     marginBottom: 16,
     paddingHorizontal: 16,
     paddingVertical: 9,
   },
-  editAvatarText: { color: '#ffffff', fontSize: 13, fontWeight: '900' },
+  editAvatarText: { color: colors.accent, fontFamily: font.bold, fontSize: 13, fontWeight: '900' },
   section: { marginBottom: 28 },
   row: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  name: { color: '#fff', fontSize: 24, fontWeight: '800' },
-  editHint: { color: '#666', fontSize: 12, marginTop: 2 },
-  email: { color: '#888', fontSize: 14, marginTop: 4 },
+  name: { color: colors.white, fontFamily: font.extraBold, fontSize: 26, fontWeight: '800' },
+  editHint: { color: colors.accent, fontFamily: font.medium, fontSize: 12, marginTop: 2 },
+  email: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 14, marginTop: 4 },
   input: {
-    backgroundColor: '#1a1d27',
-    borderColor: '#2a2d3a',
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.md,
     borderWidth: 1,
     color: '#fff',
     fontSize: 16,
@@ -357,27 +368,32 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     alignItems: 'center',
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.accent,
     borderRadius: 10,
     minWidth: 44,
     padding: 12,
   },
-  saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '900' },
+  saveBtnText: { color: colors.background, fontFamily: font.bold, fontSize: 14, fontWeight: '900' },
   sectionTitle: {
-    color: '#888',
+    color: colors.textMuted,
+    fontFamily: font.semiBold,
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 16,
     textTransform: 'uppercase',
   },
   statsCard: {
-    backgroundColor: '#0a3d1f',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
     marginBottom: 28,
     padding: 18,
+    ...shadows.card,
   },
   statsEyebrow: {
-    color: '#f59e0b',
+    color: colors.accent,
+    fontFamily: font.extraBold,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 2,
@@ -386,35 +402,30 @@ const styles = StyleSheet.create({
   ratingRow: { alignItems: 'center', flexDirection: 'row', gap: 14, marginBottom: 14 },
   fifaRatingCard: {
     alignItems: 'center',
-    backgroundColor: '#f59e0b',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     minWidth: 72,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  fifaRating: { color: '#78350f', fontSize: 34, fontWeight: '900' },
-  fifaRatingLabel: { color: '#78350f', fontSize: 11, fontWeight: '900', marginTop: -2 },
+  fifaRating: { color: colors.background, fontFamily: font.extraBold, fontSize: 34, fontWeight: '900' },
+  fifaRatingLabel: { color: colors.background, fontFamily: font.extraBold, fontSize: 11, fontWeight: '900', marginTop: -2 },
   eloDisplayWrap: { flex: 1 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   statTile: { alignItems: 'center', paddingVertical: 10, width: '33.333%' },
   statTileValue: { fontSize: 28, fontWeight: '900' },
-  statTileLabel: { color: '#9ca3af', fontSize: 11, fontWeight: '800', marginTop: 3 },
+  statTileLabel: { color: colors.textSubtle, fontFamily: font.semiBold, fontSize: 11, fontWeight: '800', marginTop: 3 },
   progressWrap: { marginTop: 14 },
   progressLabelRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  progressLabel: { color: '#d1d5db', fontSize: 12, fontWeight: '700' },
-  progressValue: { color: '#22c55e', fontSize: 12, fontWeight: '900' },
-  eloHint: { color: '#9ca3af', fontSize: 12, marginTop: 4 },
+  progressLabel: { color: colors.textMuted, fontFamily: font.semiBold, fontSize: 12, fontWeight: '700' },
+  progressValue: { color: colors.accent, fontFamily: font.extraBold, fontSize: 12, fontWeight: '900' },
+  eloHint: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 12, marginTop: 4 },
   teamStatsCard: {
-    backgroundColor: '#1a1d27',
-    borderColor: '#2a2d3a',
-    borderRadius: 16,
-    borderWidth: 1,
     marginBottom: 28,
-    padding: 16,
   },
   teamStatsHeader: {
     alignItems: 'center',
@@ -423,9 +434,10 @@ const styles = StyleSheet.create({
   },
   teamStatsRow: { flexDirection: 'row' },
   rankBadge: {
-    backgroundColor: '#f59e0b22',
+    backgroundColor: '#D2B5FF22',
     borderRadius: 999,
-    color: '#f59e0b',
+    color: colors.accent,
+    fontFamily: font.extraBold,
     fontSize: 13,
     fontWeight: '900',
     paddingHorizontal: 10,
@@ -440,25 +452,25 @@ const styles = StyleSheet.create({
     width: 32,
   },
   formDotText: { fontSize: 13, fontWeight: '900' },
-  formHint: { color: '#888', fontSize: 12, marginTop: 10 },
+  formHint: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 12, marginTop: 10 },
   skillRow: { alignItems: 'center', flexDirection: 'row', gap: 10, marginBottom: 12 },
-  skillLabel: { color: '#fff', fontSize: 14, width: 118 },
+  skillLabel: { color: colors.white, fontFamily: font.medium, fontSize: 14, width: 118 },
   skillBarBg: {
-    backgroundColor: '#1a1d27',
+    backgroundColor: colors.surfaceSoft,
     borderRadius: 3,
     flex: 1,
     height: 6,
     overflow: 'hidden',
   },
-  skillBarFill: { backgroundColor: '#22c55e', borderRadius: 3, height: '100%' },
-  skillValue: { color: '#888', fontSize: 12, textAlign: 'right', width: 30 },
-  skillNote: { color: '#444', fontSize: 11, fontStyle: 'italic', marginTop: 8 },
+  skillBarFill: { backgroundColor: colors.accent, borderRadius: 3, height: '100%' },
+  skillValue: { color: colors.textSubtle, fontFamily: font.medium, fontSize: 12, textAlign: 'right', width: 30 },
+  skillNote: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 11, fontStyle: 'italic', marginTop: 8 },
   logoutBtn: {
     alignItems: 'center',
-    borderColor: '#ef4444',
+    borderColor: colors.danger,
     borderRadius: 12,
     borderWidth: 1,
     padding: 14,
   },
-  logoutText: { color: '#ef4444', fontWeight: '600' },
+  logoutText: { color: colors.danger, fontFamily: font.semiBold, fontWeight: '600' },
 });

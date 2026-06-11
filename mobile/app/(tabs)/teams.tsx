@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useMyTeams, useCreateTeam, useJoinTeam } from '@/hooks/useTeams';
 import { useAuth } from '@/hooks/useAuth';
+import { colors, font, radii, shadows, spacing } from '@/lib/theme';
 
 export default function TeamsScreen() {
   const router = useRouter();
@@ -43,8 +44,12 @@ export default function TeamsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 24 }}>
-      <Text style={styles.title}>Mis Equipos</Text>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 24, paddingBottom: 120 }}>
+      <View style={styles.hero}>
+        <Text style={styles.eyebrow}>Club House</Text>
+        <Text style={styles.title}>Mis Equipos</Text>
+        <Text style={styles.heroSubtitle}>Administra planteles, codigos y ranking de tus clubes.</Text>
+      </View>
 
       {isLoading && <ActivityIndicator color="#22c55e" style={{ marginTop: 40 }} />}
 
@@ -165,50 +170,62 @@ export default function TeamsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117' },
-  title: { fontSize: 24, fontWeight: '800', color: '#fff', marginBottom: 24 },
+  container: { flex: 1, backgroundColor: colors.background },
+  hero: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 28,
+    borderWidth: 1,
+    marginBottom: 24,
+    padding: spacing.xl,
+    ...shadows.card,
+  },
+  eyebrow: { color: colors.accent, fontFamily: font.bold, fontSize: 12, textTransform: 'uppercase' },
+  title: { fontSize: 28, fontWeight: '800', color: colors.white, fontFamily: font.extraBold, marginTop: 6 },
+  heroSubtitle: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 13, lineHeight: 20, marginTop: 8 },
   empty: { alignItems: 'center', marginTop: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  emptyHint: { color: '#888', marginTop: 4 },
+  emptyText: { color: colors.white, fontFamily: font.bold, fontSize: 18, fontWeight: '600' },
+  emptyHint: { color: colors.textSubtle, fontFamily: font.regular, marginTop: 4 },
   teamCard: {
-    backgroundColor: '#1a1d27', borderRadius: 16, padding: 20,
-    marginBottom: 16, borderWidth: 1, borderColor: '#2a2d3a'
+    backgroundColor: colors.surface, borderRadius: radii.lg, padding: 20,
+    marginBottom: 16, borderWidth: 1, borderColor: colors.border,
+    ...shadows.card,
   },
   teamHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  teamName: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  teamName: { fontSize: 18, fontWeight: '700', color: colors.white, fontFamily: font.bold },
   badge: {
-    backgroundColor: '#22c55e22', color: '#22c55e',
-    fontSize: 11, fontWeight: '700', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20
+    backgroundColor: '#D2B5FF22', color: colors.accent,
+    fontFamily: font.bold, fontSize: 11, fontWeight: '700', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20
   },
   teamStats: { flexDirection: 'row', marginBottom: 16, gap: 24 },
   stat: { alignItems: 'center' },
-  statValue: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  statLabel: { fontSize: 11, color: '#888', marginTop: 2 },
-  codeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0f1117', borderRadius: 10, padding: 12 },
-  codeLabel: { color: '#888', fontSize: 12 },
-  codeValue: { color: '#22c55e', fontWeight: '800', fontSize: 16, letterSpacing: 2 },
+  statValue: { fontSize: 24, fontWeight: '800', color: colors.white, fontFamily: font.extraBold },
+  statLabel: { fontSize: 11, color: colors.textSubtle, fontFamily: font.medium, marginTop: 2 },
+  codeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.backgroundDeep, borderRadius: 10, padding: 12 },
+  codeLabel: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 12 },
+  codeValue: { color: colors.accent, fontFamily: font.extraBold, fontWeight: '800', fontSize: 16, letterSpacing: 2 },
   rankingBtn: {
     alignSelf: 'flex-start',
-    borderColor: '#22c55e',
+    borderColor: colors.accent,
     borderRadius: 999,
     borderWidth: 1,
     marginTop: 14,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
-  rankingBtnText: { color: '#22c55e', fontSize: 12, fontWeight: '800' },
+  rankingBtnText: { color: colors.accent, fontFamily: font.bold, fontSize: 12, fontWeight: '800' },
   actions: { gap: 12, marginTop: 8 },
-  createBtn: { backgroundColor: '#22c55e', borderRadius: 12, padding: 16, alignItems: 'center' },
-  createBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  joinBtn: { borderWidth: 1, borderColor: '#22c55e', borderRadius: 12, padding: 16, alignItems: 'center' },
-  joinBtnText: { color: '#22c55e', fontWeight: '700', fontSize: 15 },
+  createBtn: { backgroundColor: colors.accent, borderRadius: 12, padding: 16, alignItems: 'center' },
+  createBtnText: { color: colors.background, fontFamily: font.bold, fontWeight: '700', fontSize: 15 },
+  joinBtn: { borderWidth: 1, borderColor: colors.accent, borderRadius: 12, padding: 16, alignItems: 'center' },
+  joinBtnText: { color: colors.accent, fontFamily: font.bold, fontWeight: '700', fontSize: 15 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: '#1a1d27', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 28 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 20 },
+  modal: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 28 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: colors.white, fontFamily: font.bold, marginBottom: 20 },
   input: {
-    backgroundColor: '#0f1117', color: '#fff', borderRadius: 12,
-    padding: 14, marginBottom: 16, fontSize: 16, borderWidth: 1, borderColor: '#2a2d3a'
+    backgroundColor: colors.backgroundDeep, color: colors.white, borderRadius: 12,
+    padding: 14, marginBottom: 16, fontSize: 16, borderWidth: 1, borderColor: colors.border
   },
-  cancel: { color: '#888', textAlign: 'center', fontSize: 14 },
+  cancel: { color: colors.textSubtle, fontFamily: font.medium, textAlign: 'center', fontSize: 14 },
 });

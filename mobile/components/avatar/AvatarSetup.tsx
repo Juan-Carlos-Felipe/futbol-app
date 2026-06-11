@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,23 +11,18 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
+import AvatarConfigPanel from '@/components/avatar/AvatarConfig';
 import AvatarPreview from '@/components/avatar/AvatarPreview';
-import { PressableScale } from '@/components/ui/PressableScale';
+import { avatarGenerationService } from '@/lib/avatarGenerationService';
 import {
-  AVATAR_POSES,
-  DEFAULT_AVATAR_POSE,
-  DEFAULT_TEAM_COLOR,
   DEMO_AVATAR_URL,
-  POSE_LABELS,
-  POSE_ICONS,
-  TEAM_COLORS,
-  saveAvatarConfig,
-  saveAvatarToProfile,
-  saveAvatarUrl,
   type AvatarConfig,
-  type AvatarPose,
+  type AvatarPhotoSource,
+  createDefaultAvatarConfig,
+  normalizeAvatarConfig,
 } from '@/lib/avatar';
+import { useAvatarStore } from '@/lib/avatarStore';
+import { colors, font, gradients, radii, shadows } from '@/lib/theme';
 
 type AvatarSetupProps = {
   userId: string;
@@ -35,94 +31,148 @@ type AvatarSetupProps = {
 };
 
 const GENERATION_MESSAGES = [
-  'Analizando tu foto...',
-  'Generando tu avatar...',
-  'Aplicando tu camiseta...',
-  'Casi listo...',
+  'Analizando rasgos de la foto...',
+  'Preparando modelo base...',
+  'Aplicando camiseta y estilo...',
+  'Dejando todo listo para guardar...',
 ];
 
 export default function AvatarSetup({ userId, currentConfig, onComplete }: AvatarSetupProps) {
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(currentConfig?.avatarUrl ?? null);
-  const [selectedPose, setSelectedPose] = useState<AvatarPose>(
-    currentConfig?.selectedPose ?? DEFAULT_AVATAR_POSE
+  const store = useAvatarStore();
+  const [config, setConfig] = useState<AvatarConfig>(() =>
+    normalizeAvatarConfig(currentConfig ?? createDefaultAvatarConfig(userId), userId)
   );
-  const [teamColor, setTeamColor] = useState(currentConfig?.teamColor ?? DEFAULT_TEAM_COLOR);
+  const [selectedPhoto, setSelectedPhoto] = useState<AvatarPhotoSource | null>(
+    currentConfig?.photo ?? null
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
+  const [modeMessage, setModeMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const nextConfig = normalizeAvatarConfig(currentConfig ?? createDefaultAvatarConfig(userId), userId);
+    setConfig(nextConfig);
+    setSelectedPhoto(nextConfig.photo ?? null);
+    store.setConfig(nextConfig);
+  }, [currentConfig, userId]);
 
   useEffect(() => {
     if (!isGenerating) return;
 
     const interval = setInterval(() => {
       setMessageIndex((current) => (current + 1) % GENERATION_MESSAGES.length);
-    }, 500);
+    }, 650);
 
     return () => clearInterval(interval);
   }, [isGenerating]);
 
-  const canSave = Boolean(avatarUrl) && !isGenerating;
-  const preview = useMemo(() => {
-    if (!avatarUrl) {
-      return <AvatarPlaceholder size="lg" teamColor={teamColor} />;
-    }
-
-    return (
-      <AvatarPreview
-        avatarUrl={avatarUrl}
-        pose={selectedPose}
-        teamColor={teamColor}
-        width={170}
-        height={240}
-        autoRotate
-      />
-    );
-  }, [avatarUrl, selectedPose, teamColor]);
+  const providerConfigured = avatarGenerationService.isConfigured();
+  const previewConfig = useMemo(
+    () => ({
+      ...config,
+      avatarUrl: config.avatarUrl ?? DEMO_AVATAR_URL,
+    }),
+    [config]
+  );
 
   async function pickPhoto() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos para preparar el avatar.');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.86,
     });
 
     if (result.canceled) return;
 
-    setPhotoUri(result.assets[0].uri);
-    await generateAvatar();
+    await handlePhoto({
+      uri: result.assets[0].uri,
+      source: 'library',
+      createdAt: new Date().toISOString(),
+    });
   }
 
-  async function generateAvatar() {
+  async function takePhoto() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permiso requerido', 'Activa la camara para tomar una selfie de referencia.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.86,
+    });
+
+    if (result.canceled) return;
+
+    await handlePhoto({
+      uri: result.assets[0].uri,
+      source: 'camera',
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  async function handlePhoto(photo: AvatarPhotoSource) {
+    setSelectedPhoto(photo);
+    setConfig((current) => ({ ...current, photo, source: 'photo', updatedAt: new Date().toISOString() }));
+    await generateAvatar(photo);
+  }
+
+  async function generateAvatar(photo: AvatarPhotoSource) {
     setIsGenerating(true);
     setMessageIndex(0);
+    setModeMessage(null);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setAvatarUrl(DEMO_AVATAR_URL);
-      await saveAvatarUrl(userId, DEMO_AVATAR_URL);
-    } catch {
-      Alert.alert('Error', 'No se pudo generar el avatar. Intenta de nuevo.');
+      const result = await avatarGenerationService.generateFromPhoto({
+        userId,
+        photo,
+        avatarName: config.avatarName,
+        teamColor: config.teamColor,
+        customization: config.customization,
+      });
+
+      const nextConfig: AvatarConfig = {
+        ...config,
+        avatarUrl: result.avatarUrl,
+        photo,
+        source: result.provider ? 'external_provider' : 'photo',
+        provider: result.provider,
+        modelFormat: result.modelFormat,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setConfig(nextConfig);
+      store.setConfig(nextConfig);
+      setModeMessage(result.message);
+    } catch (error) {
+      Alert.alert(
+        'No se pudo generar',
+        error instanceof Error ? error.message : 'Intenta nuevamente con otra foto.'
+      );
     } finally {
       setIsGenerating(false);
     }
   }
 
   async function save() {
-    if (!avatarUrl) return;
-
-    const config: AvatarConfig = {
-      userId,
-      avatarUrl,
-      selectedPose,
-      teamColor,
+    const nextConfig = avatarGenerationService.buildManualConfig({
+      ...config,
+      photo: selectedPhoto,
       updatedAt: new Date().toISOString(),
-    };
+    });
 
     try {
-      await saveAvatarConfig(config);
-      await saveAvatarToProfile(config);
-      onComplete(config);
+      await store.save(nextConfig);
+      onComplete(nextConfig);
     } catch (error) {
       Alert.alert(
         'Error',
@@ -134,69 +184,91 @@ export default function AvatarSetup({ userId, currentConfig, onComplete }: Avata
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Tu avatar 3D</Text>
-        <Text style={styles.subtitle}>Sube una foto, elige pose y personaliza la camiseta.</Text>
+        <View style={styles.header}>
+          <Text style={styles.kicker}>MI AVATAR</Text>
+          <Text style={styles.title}>Creador 3D</Text>
+          <Text style={styles.subtitle}>
+            Personaliza tu jugador, guarda cambios y deja preparado el flujo desde selfie.
+          </Text>
+        </View>
 
         <View style={styles.previewCard}>
-          {preview}
+          <AvatarPreview
+            avatarUrl={previewConfig.avatarUrl}
+            pose={previewConfig.selectedPose}
+            teamColor={previewConfig.teamColor}
+            customization={previewConfig.customization}
+            avatarName={previewConfig.avatarName}
+            width={260}
+            height={330}
+            autoRotate
+            showControls
+          />
           {isGenerating ? (
             <View style={styles.generatingOverlay}>
-              <ActivityIndicator color="#22c55e" size="large" />
+              <ActivityIndicator color={colors.accent} size="large" />
               <Text style={styles.generatingText}>{GENERATION_MESSAGES[messageIndex]}</Text>
             </View>
           ) : null}
         </View>
 
-        <TouchableOpacity style={styles.uploadButton} onPress={pickPhoto} disabled={isGenerating}>
-          <Ionicons name="camera-outline" size={20} color="#07120b" />
-          <Text style={styles.uploadText}>
-            {photoUri || avatarUrl ? 'Cambiar foto del avatar' : 'Subir mi foto para crear avatar'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.photoCard}>
+          <View style={styles.photoHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Crear avatar desde foto</Text>
+              <Text style={styles.privacyText}>
+                Tu foto se usa solo como referencia. La integracion externa queda inactiva si no
+                configuras EXPO_PUBLIC_AVATAR_GENERATION_API_URL.
+              </Text>
+            </View>
+            <Ionicons name="shield-checkmark-outline" size={24} color={colors.accent} />
+          </View>
 
-        <Text style={styles.sectionTitle}>Pose</Text>
-        <View style={styles.poseGrid}>
-          {AVATAR_POSES.map((pose) => {
-            const selected = selectedPose === pose;
-            return (
-              <PressableScale
-                key={pose}
-                style={[styles.poseCard, selected && styles.poseCardActive]}
-                onPress={() => setSelectedPose(pose)}
-              >
-                <Text style={styles.poseIcon}>{POSE_ICONS[pose]}</Text>
-                <Text style={[styles.poseLabel, selected && styles.poseLabelActive]}>
-                  {POSE_LABELS[pose]}
+          {selectedPhoto ? (
+            <View style={styles.photoPreviewRow}>
+              <Image source={{ uri: selectedPhoto.uri }} style={styles.photoPreview} />
+              <View style={styles.photoMeta}>
+                <Text style={styles.photoTitle}>Selfie lista</Text>
+                <Text style={styles.photoSubtitle}>
+                  Origen: {selectedPhoto.source === 'camera' ? 'Camara' : 'Galeria'}
                 </Text>
-              </PressableScale>
-            );
-          })}
+              </View>
+            </View>
+          ) : null}
+
+          <View style={styles.photoActions}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={pickPhoto} disabled={isGenerating}>
+              <Ionicons name="image-outline" size={18} color={colors.text} />
+              <Text style={styles.secondaryButtonText}>Subir foto</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryButton} onPress={takePhoto} disabled={isGenerating}>
+              <Ionicons name="camera-outline" size={18} color={colors.text} />
+              <Text style={styles.secondaryButtonText}>Tomar foto</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.providerStatus}>
+            {providerConfigured
+              ? 'Proveedor externo configurado para generar GLB/GLTF.'
+              : 'Modo manual activo: puedes guardar y editar sin API externa.'}
+          </Text>
+          {modeMessage ? <Text style={styles.modeMessage}>{modeMessage}</Text> : null}
         </View>
 
-        <Text style={styles.sectionTitle}>Color de camiseta</Text>
-        <View style={styles.colorRow}>
-          {TEAM_COLORS.map((color) => {
-            const selected = color === teamColor;
-            return (
-              <TouchableOpacity
-                key={color}
-                style={[
-                  styles.colorSwatch,
-                  { backgroundColor: color },
-                  selected && styles.colorSwatchActive,
-                ]}
-                onPress={() => setTeamColor(color)}
-              />
-            );
-          })}
+        <View style={styles.configCard}>
+          <AvatarConfigPanel config={config} onChange={(nextConfig) => {
+            setConfig(nextConfig);
+            store.setConfig(nextConfig);
+          }} />
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+          style={[styles.saveButton, (isGenerating || store.loading) && styles.saveButtonDisabled]}
           onPress={save}
-          disabled={!canSave}
+          disabled={isGenerating || store.loading}
         >
-          <Text style={styles.saveText}>Guardar avatar</Text>
+          {store.loading ? <ActivityIndicator color={colors.background} /> : null}
+          <Text style={styles.saveText}>{store.loading ? 'Guardando...' : 'Guardar avatar'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -204,83 +276,147 @@ export default function AvatarSetup({ userId, currentConfig, onComplete }: Avata
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#0f1117', flex: 1 },
-  content: { padding: 20, paddingBottom: 36 },
-  title: { color: '#ffffff', fontSize: 28, fontWeight: '900' },
-  subtitle: { color: '#9ca3af', fontSize: 14, lineHeight: 20, marginTop: 4 },
+  screen: { backgroundColor: colors.background, flex: 1 },
+  content: { padding: 18, paddingBottom: 38 },
+  header: { marginBottom: 16 },
+  kicker: {
+    color: colors.accent,
+    fontFamily: font.bold,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  title: {
+    color: colors.text,
+    fontFamily: font.extraBold,
+    fontSize: 34,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  subtitle: {
+    color: colors.textMuted,
+    fontFamily: font.regular,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 4,
+  },
   previewCard: {
     alignItems: 'center',
-    backgroundColor: '#08130d',
-    borderColor: '#1f3f2c',
-    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.xl,
     borderWidth: 1,
     justifyContent: 'center',
-    marginTop: 18,
-    minHeight: 270,
+    minHeight: 356,
     overflow: 'hidden',
+    paddingVertical: 12,
+    ...shadows.card,
   },
   generatingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    backgroundColor: 'rgba(15,17,23,0.84)',
+    backgroundColor: 'rgba(23,24,39,0.86)',
     justifyContent: 'center',
   },
-  generatingText: { color: '#ffffff', fontSize: 15, fontWeight: '800', marginTop: 12 },
-  uploadButton: {
+  generatingText: {
+    color: colors.text,
+    fontFamily: font.bold,
+    fontSize: 14,
+    fontWeight: '900',
+    marginTop: 12,
+  },
+  photoCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    marginTop: 16,
+    padding: 16,
+  },
+  photoHeader: { flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
+  sectionTitle: {
+    color: colors.text,
+    fontFamily: font.bold,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  privacyText: {
+    color: colors.textSubtle,
+    fontFamily: font.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 5,
+    maxWidth: 280,
+  },
+  photoPreviewRow: {
     alignItems: 'center',
-    backgroundColor: '#22c55e',
-    borderRadius: 14,
+    backgroundColor: colors.surfaceSoft,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 14,
+    padding: 10,
+  },
+  photoPreview: { borderRadius: radii.md, height: 64, width: 64 },
+  photoMeta: { flex: 1 },
+  photoTitle: { color: colors.text, fontFamily: font.bold, fontSize: 14, fontWeight: '900' },
+  photoSubtitle: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 12, marginTop: 3 },
+  photoActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  secondaryButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flex: 1,
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
-    marginTop: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
   },
-  uploadText: { color: '#07120b', fontSize: 15, fontWeight: '900' },
-  sectionTitle: {
-    color: '#ffffff',
-    fontSize: 16,
+  secondaryButtonText: {
+    color: colors.text,
+    fontFamily: font.bold,
+    fontSize: 13,
     fontWeight: '900',
-    marginBottom: 10,
-    marginTop: 22,
   },
-  poseGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  poseCard: {
-    alignItems: 'center',
-    backgroundColor: '#1a1d27',
-    borderColor: '#2a2d3a',
-    borderRadius: 14,
+  providerStatus: {
+    color: colors.textMuted,
+    fontFamily: font.medium,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 12,
+  },
+  modeMessage: {
+    color: colors.warning,
+    fontFamily: font.medium,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
+  },
+  configCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    padding: 12,
-    width: '31%',
-  },
-  poseCardActive: { borderColor: '#22c55e', borderWidth: 2 },
-  poseIcon: { color: '#ffffff', fontSize: 18, fontWeight: '900' },
-  poseLabel: { color: '#9ca3af', fontSize: 11, fontWeight: '800', marginTop: 6, textAlign: 'center' },
-  poseLabelActive: { color: '#22c55e' },
-  colorRow: { flexDirection: 'row', gap: 12 },
-  colorSwatch: {
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 38,
-    width: 38,
-  },
-  colorSwatchActive: {
-    borderColor: '#ffffff',
-    borderWidth: 3,
-    elevation: 6,
-    shadowColor: '#ffffff',
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
+    marginTop: 16,
+    padding: 16,
   },
   saveButton: {
     alignItems: 'center',
-    backgroundColor: '#2563eb',
-    borderRadius: 14,
-    marginTop: 26,
-    paddingVertical: 15,
+    backgroundColor: colors.accent,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+    marginTop: 18,
+    paddingVertical: 16,
   },
-  saveButtonDisabled: { opacity: 0.45 },
-  saveText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
+  saveButtonDisabled: { opacity: 0.5 },
+  saveText: {
+    color: colors.background,
+    fontFamily: font.extraBold,
+    fontSize: 15,
+    fontWeight: '900',
+  },
 });

@@ -7,6 +7,7 @@ import { AnimatedCard } from '@/components/ui/AnimatedCard';
 import { SkeletonBox } from '@/components/ui/SkeletonBox';
 import { useRanking } from '@/hooks/useMatchmaking';
 import { supabase } from '@/lib/supabase';
+import { colors, font, radii, shadows } from '@/lib/theme';
 
 type RankingTab = 'general' | 'week' | 'zone';
 
@@ -146,9 +147,11 @@ function RankingSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#f3f4f6', flex: 1 },
+  screen: { backgroundColor: colors.background, flex: 1 },
   header: {
-    backgroundColor: '#0a3d1f',
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
     height: 180,
     paddingHorizontal: 16,
     paddingTop: 50,
@@ -162,41 +165,41 @@ const styles = StyleSheet.create({
     top: 48,
     width: 38,
   },
-  title: { color: '#ffffff', fontSize: 32, fontWeight: '900' },
-  subtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
+  title: { color: colors.white, fontFamily: font.extraBold, fontSize: 32, fontWeight: '900' },
+  subtitle: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 14, marginTop: 4 },
   myPositionCard: {
     alignSelf: 'flex-start',
-    backgroundColor: '#f59e0b',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     marginTop: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  myPositionText: { color: '#78350f', fontSize: 13, fontWeight: '900' },
+  myPositionText: { color: colors.background, fontFamily: font.extraBold, fontSize: 13, fontWeight: '900' },
   tabs: {
-    backgroundColor: '#ffffff',
-    borderBottomColor: '#e5e7eb',
+    backgroundColor: colors.background,
+    borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
     gap: 8,
     padding: 12,
   },
   tabButton: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.surface,
     borderRadius: 999,
     flex: 1,
     paddingVertical: 10,
   },
-  tabButtonActive: { backgroundColor: '#16a34a' },
-  tabText: { color: '#6b7280', fontSize: 13, fontWeight: '800', textAlign: 'center' },
-  tabTextActive: { color: '#ffffff' },
+  tabButtonActive: { backgroundColor: colors.accent },
+  tabText: { color: colors.textSubtle, fontFamily: font.bold, fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  tabTextActive: { color: colors.background },
   listContent: { flexGrow: 1, padding: 16, paddingBottom: 28 },
   comingSoon: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 24 },
-  comingSoonText: { color: '#6b7280', fontSize: 16, fontWeight: '800', marginTop: 10 },
+  comingSoonText: { color: colors.textSubtle, fontFamily: font.bold, fontSize: 16, fontWeight: '800', marginTop: 10 },
   skeletonRow: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
     flexDirection: 'row',
     gap: 10,
     marginBottom: 6,

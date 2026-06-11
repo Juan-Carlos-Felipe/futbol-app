@@ -1,10 +1,18 @@
 import { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, KeyboardAvoidingView, Platform
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { signIn } from '@/lib/auth';
+import { colors, font, gradients, radii, shadows } from '@/lib/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -17,7 +25,6 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signIn(email, password);
-      // El listener de onAuthStateChange redirige automáticamente
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -30,52 +37,109 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.title}>⚽ FutbolApp</Text>
-      <Text style={styles.subtitle}>Inicia sesión</Text>
+      <LinearGradient colors={gradients.hero} style={styles.hero}>
+        <Text style={styles.kicker}>MATCHDAY APP</Text>
+        <Text style={styles.title}>FutbolApp</Text>
+        <Text style={styles.subtitle}>
+          Resultados, canchas y equipos en una experiencia premium.
+        </Text>
+      </LinearGradient>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#666"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Contraseña"
-        placeholderTextColor="#666"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Inicia sesion</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor={colors.textMuted}
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Contrasena"
+          placeholderTextColor={colors.textMuted}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
 
-      <TouchableOpacity
-        style={[styles.btn, loading && styles.btnDisabled]}
-        onPress={handleLogin}
-        disabled={loading}
-      >
-        <Text style={styles.btnText}>{loading ? 'Entrando...' : 'Entrar'}</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.btn, loading && styles.btnDisabled]}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          <Text style={styles.btnText}>{loading ? 'Entrando...' : 'Entrar'}</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push('/register')}>
-        <Text style={styles.link}>¿No tienes cuenta? Regístrate</Text>
-      </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/register')}>
+          <Text style={styles.link}>No tienes cuenta? Registrate</Text>
+        </TouchableOpacity>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117', justifyContent: 'center', padding: 24 },
-  title: { fontSize: 36, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 4 },
-  subtitle: { fontSize: 16, color: '#888', textAlign: 'center', marginBottom: 32 },
-  input: {
-    backgroundColor: '#1a1d27', color: '#fff', borderRadius: 12,
-    padding: 16, marginBottom: 12, fontSize: 16, borderWidth: 1, borderColor: '#2a2d3a'
+  container: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', padding: 20 },
+  hero: {
+    borderRadius: radii.xl,
+    marginBottom: 18,
+    minHeight: 178,
+    overflow: 'hidden',
+    padding: 22,
+    ...shadows.card,
   },
-  btn: { backgroundColor: '#22c55e', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8 },
+  kicker: {
+    color: colors.accent,
+    fontFamily: font.bold,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+    marginBottom: 34,
+  },
+  title: { color: colors.text, fontFamily: font.extraBold, fontSize: 38, fontWeight: '900' },
+  subtitle: { color: colors.textMuted, fontFamily: font.medium, fontSize: 14, lineHeight: 21, marginTop: 8 },
+  card: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    padding: 18,
+  },
+  cardTitle: {
+    color: colors.text,
+    fontFamily: font.bold,
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 14,
+  },
+  input: {
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    color: colors.text,
+    fontFamily: font.medium,
+    fontSize: 15,
+    marginBottom: 12,
+    padding: 15,
+  },
+  btn: {
+    alignItems: 'center',
+    backgroundColor: colors.accent,
+    borderRadius: radii.md,
+    marginTop: 8,
+    padding: 16,
+  },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  link: { color: '#22c55e', textAlign: 'center', marginTop: 20, fontSize: 14 },
+  btnText: { color: colors.background, fontFamily: font.bold, fontSize: 15, fontWeight: '900' },
+  link: {
+    color: colors.accent,
+    fontFamily: font.semiBold,
+    fontSize: 13,
+    marginTop: 18,
+    textAlign: 'center',
+  },
 });

@@ -2,6 +2,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react
 import { Venue, VenueWithDistance } from '@/lib/venues';
 import { openDirections } from './MapLinkSheet';
 import { SkeletonBox } from '@/components/ui/SkeletonBox';
+import { colors, font, radii, shadows } from '@/lib/theme';
 
 const isWeb = Platform.OS === 'web';
 
@@ -142,10 +143,11 @@ const styles = StyleSheet.create({
   card: {
     position: 'relative',
     marginBottom: 12,
-    borderRadius: 12,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: '#2a2d3a',
-    backgroundColor: '#1a1d27',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
   cardContent: {
     flexDirection: 'row',
@@ -154,14 +156,14 @@ const styles = StyleSheet.create({
   photo: {
     width: 100,
     height: 100,
-    borderRadius: 8,
-    backgroundColor: '#2a2d3a',
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceSoft,
   },
   photoPlaceholder: {
     width: 100,
     height: 100,
-    borderRadius: 8,
-    backgroundColor: '#2a2d3a',
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -174,12 +176,14 @@ const styles = StyleSheet.create({
     paddingRight: 56,
   },
   name: {
-    color: '#fff',
+    color: colors.white,
+    fontFamily: font.bold,
     fontSize: 15,
     fontWeight: '700',
   },
   meta: {
-    color: '#888',
+    color: colors.textSubtle,
+    fontFamily: font.regular,
     fontSize: 12,
     marginTop: 4,
   },
@@ -190,23 +194,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   price: {
-    color: '#22c55e',
+    color: colors.accent,
+    fontFamily: font.bold,
     fontSize: 14,
     fontWeight: '700',
   },
   priceStrike: {
-    color: '#777',
+    color: colors.textSubtle,
     fontSize: 12,
     textDecorationLine: 'line-through',
   },
   freeBadge: {
-    backgroundColor: '#123d25',
+    backgroundColor: '#D2B5FF22',
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   freeBadgeText: {
-    color: '#22c55e',
+    color: colors.accent,
+    fontFamily: font.bold,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -221,17 +227,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   ratingText: {
-    color: '#aaa',
+    color: colors.textMuted,
     fontSize: 12,
   },
   directionsButton: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#2a2d3a',
+    borderTopColor: colors.border,
   },
   directionsText: {
-    color: '#22c55e',
+    color: colors.accent,
+    fontFamily: font.bold,
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'right',
@@ -240,13 +247,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.accent,
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   featuredText: {
-    color: '#07120b',
+    color: colors.background,
+    fontFamily: font.bold,
     fontSize: 11,
     fontWeight: '700',
   },

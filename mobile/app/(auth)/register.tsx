@@ -1,10 +1,19 @@
 import { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { signUp } from '@/lib/auth';
+import { colors, font, gradients, radii, shadows } from '@/lib/theme';
 
 export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState('');
@@ -14,15 +23,15 @@ export default function RegisterScreen() {
   const router = useRouter();
 
   async function handleRegister() {
-    if (!displayName || !email || !password)
-      return Alert.alert('Completa todos los campos');
-    if (password.length < 6)
-      return Alert.alert('La contraseña debe tener al menos 6 caracteres');
+    if (!displayName || !email || !password) return Alert.alert('Completa todos los campos');
+    if (password.length < 6) {
+      return Alert.alert('La contrasena debe tener al menos 6 caracteres');
+    }
 
     setLoading(true);
     try {
       await signUp(email, password, displayName);
-      Alert.alert('¡Listo!', 'Cuenta creada. Revisa tu email para confirmar.');
+      Alert.alert('Listo!', 'Cuenta creada. Revisa tu email para confirmar.');
       router.replace('/login');
     } catch (e: any) {
       Alert.alert('Error', e.message);
@@ -37,60 +46,117 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>⚽ FutbolApp</Text>
-        <Text style={styles.subtitle}>Crea tu cuenta</Text>
+        <LinearGradient colors={gradients.score} style={styles.hero}>
+          <Text style={styles.kicker}>JOIN THE CLUB</Text>
+          <Text style={styles.title}>Crea tu equipo</Text>
+          <Text style={styles.subtitle}>
+            Arma tu perfil, sube tu ELO y reserva la proxima cancha.
+          </Text>
+        </LinearGradient>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Nombre de jugador"
-          placeholderTextColor="#666"
-          value={displayName}
-          onChangeText={setDisplayName}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#666"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Contraseña (mín. 6 caracteres)"
-          placeholderTextColor="#666"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Registro</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nombre de jugador"
+            placeholderTextColor={colors.textMuted}
+            value={displayName}
+            onChangeText={setDisplayName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor={colors.textMuted}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Contrasena (min. 6 caracteres)"
+            placeholderTextColor={colors.textMuted}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
 
-        <TouchableOpacity
-          style={[styles.btn, loading && styles.btnDisabled]}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          <Text style={styles.btnText}>{loading ? 'Creando...' : 'Crear cuenta'}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.btn, loading && styles.btnDisabled]}
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            <Text style={styles.btnText}>{loading ? 'Creando...' : 'Crear cuenta'}</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.link}>¿Ya tienes cuenta? Inicia sesión</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.link}>Ya tienes cuenta? Inicia sesion</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: '#0f1117', justifyContent: 'center', padding: 24 },
-  title: { fontSize: 36, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 4 },
-  subtitle: { fontSize: 16, color: '#888', textAlign: 'center', marginBottom: 32 },
-  input: {
-    backgroundColor: '#1a1d27', color: '#fff', borderRadius: 12,
-    padding: 16, marginBottom: 12, fontSize: 16, borderWidth: 1, borderColor: '#2a2d3a'
+  container: { flexGrow: 1, backgroundColor: colors.background, justifyContent: 'center', padding: 20 },
+  hero: {
+    borderRadius: radii.xl,
+    marginBottom: 18,
+    minHeight: 174,
+    overflow: 'hidden',
+    padding: 22,
+    ...shadows.card,
   },
-  btn: { backgroundColor: '#22c55e', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8 },
+  kicker: {
+    color: colors.text,
+    fontFamily: font.bold,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+    marginBottom: 34,
+  },
+  title: { color: colors.text, fontFamily: font.extraBold, fontSize: 34, fontWeight: '900' },
+  subtitle: { color: colors.textMuted, fontFamily: font.medium, fontSize: 14, lineHeight: 21, marginTop: 8 },
+  card: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    padding: 18,
+  },
+  cardTitle: {
+    color: colors.text,
+    fontFamily: font.bold,
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 14,
+  },
+  input: {
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    color: colors.text,
+    fontFamily: font.medium,
+    fontSize: 15,
+    marginBottom: 12,
+    padding: 15,
+  },
+  btn: {
+    alignItems: 'center',
+    backgroundColor: colors.accent,
+    borderRadius: radii.md,
+    marginTop: 8,
+    padding: 16,
+  },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  link: { color: '#22c55e', textAlign: 'center', marginTop: 20, fontSize: 14 },
+  btnText: { color: colors.background, fontFamily: font.bold, fontSize: 15, fontWeight: '900' },
+  link: {
+    color: colors.accent,
+    fontFamily: font.semiBold,
+    fontSize: 13,
+    marginTop: 18,
+    textAlign: 'center',
+  },
 });

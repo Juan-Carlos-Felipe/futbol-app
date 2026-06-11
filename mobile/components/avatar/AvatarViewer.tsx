@@ -1,13 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
-import { Renderer } from 'expo-three';
-import { useIsFocused } from '@react-navigation/native';
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
+import { useEffect, useMemo, useRef } from 'react';
+import {
+  Animated,
+  PanResponder,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
-import { ANIMATION_URLS, type AvatarPose } from '@/lib/avatar';
+import {
+  DEFAULT_AVATAR_CUSTOMIZATION,
+  type AvatarCustomization,
+  type AvatarPose,
+} from '@/lib/avatar';
+import { colors, font, gradients, radii } from '@/lib/theme';
 
 type AvatarViewerProps = {
   avatarUrl: string;
@@ -17,180 +24,259 @@ type AvatarViewerProps = {
   height?: number;
   autoRotate?: boolean;
   backgroundColor?: string;
+  customization?: Partial<AvatarCustomization>;
+  showControls?: boolean;
+  avatarName?: string;
 };
 
-type DisposableRenderer = Renderer & { dispose?: () => void };
-
 export default function AvatarViewer({
-  avatarUrl,
   pose,
   teamColor,
   width = 200,
   height = 300,
   autoRotate = false,
-  backgroundColor,
+  customization,
+  showControls = true,
+  avatarName,
 }: AvatarViewerProps) {
-  const animationRef = useRef<number | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
-  const rendererRef = useRef<DisposableRenderer | null>(null);
-  const loaderRef = useRef(new GLTFLoader());
-  const isFocused = useIsFocused();
-  const [showFallback, setShowFallback] = useState(false);
+  const rotate = useRef(new Animated.Value(0)).current;
+  const float = useRef(new Animated.Value(0)).current;
+  const zoom = useRef(new Animated.Value(1)).current;
+  const avatar = useMemo(
+    () => ({ ...DEFAULT_AVATAR_CUSTOMIZATION, ...(customization ?? {}) }),
+    [customization]
+  );
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          Math.abs(gesture.dx) > 4 || Math.abs(gesture.dy) > 4,
+        onPanResponderMove: (_, gesture) => {
+          rotate.setValue(clamp(gesture.dx / 180, -1, 1));
+          zoom.setValue(clamp(1 - gesture.dy / 500, 0.9, 1.12));
+        },
+        onPanResponderRelease: () => {
+          Animated.parallel([
+            Animated.spring(rotate, { toValue: 0, useNativeDriver: true }),
+            Animated.spring(zoom, { toValue: 1, useNativeDriver: true }),
+          ]).start();
+        },
+      }),
+    [rotate, zoom]
+  );
 
   useEffect(() => {
-    setShowFallback(false);
-    const timeout = setTimeout(() => setShowFallback(true), 10000);
-    return () => clearTimeout(timeout);
-  }, [avatarUrl, pose]);
-
-  useEffect(() => {
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      mixerRef.current?.stopAllAction();
-      sceneRef.current?.traverse((obj: THREE.Object3D) => {
-        const mesh = obj as THREE.Mesh;
-        mesh.geometry?.dispose();
-        const material = mesh.material;
-        if (Array.isArray(material)) {
-          material.forEach((item) => item.dispose());
-        } else {
-          material?.dispose();
-        }
-      });
-      rendererRef.current?.dispose?.();
-    };
-  }, []);
-
-  async function loadGltf(url: string) {
-    return new Promise<GLTF>((resolve, reject) => {
-      loaderRef.current.load(url, resolve, undefined, reject);
-    });
-  }
-
-  async function onContextCreate(gl: ExpoWebGLRenderingContext) {
-    const renderer = new Renderer({ gl }) as DisposableRenderer;
-    rendererRef.current = renderer;
-    renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
-    renderer.setClearColor(
-      backgroundColor ? new THREE.Color(backgroundColor) : new THREE.Color(0x000000),
-      backgroundColor ? 1 : 0
+    const floatRunner = Animated.loop(
+      Animated.sequence([
+        Animated.timing(float, { toValue: 1, duration: 1300, useNativeDriver: true }),
+        Animated.timing(float, { toValue: 0, duration: 1300, useNativeDriver: true }),
+      ])
     );
+    floatRunner.start();
 
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
-
-    const camera = new THREE.PerspectiveCamera(
-      35,
-      gl.drawingBufferWidth / gl.drawingBufferHeight,
-      0.1,
-      100
-    );
-    camera.position.set(0, 1.4, 2.8);
-    camera.lookAt(0, 0.9, 0);
-
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    keyLight.position.set(2, 4, 2);
-    scene.add(keyLight);
-
-    const fillLight = new THREE.DirectionalLight(0x4ade80, 0.3);
-    fillLight.position.set(-2, 2, -1);
-    scene.add(fillLight);
-
-    try {
-      const avatarGltf = await loadGltf(avatarUrl);
-      const avatarModel = avatarGltf.scene;
-      avatarModel.position.set(0, -0.9, 0);
-      avatarModel.scale.set(1, 1, 1);
-
-      avatarModel.traverse((child: THREE.Object3D) => {
-        const mesh = child as THREE.Mesh;
-        const name = child.name.toLowerCase();
-        if (
-          mesh.isMesh &&
-          (name.includes('outfit') || name.includes('top') || name.includes('shirt'))
-        ) {
-          mesh.material = new THREE.MeshLambertMaterial({ color: new THREE.Color(teamColor) });
-        }
-      });
-
-      scene.add(avatarModel);
-
-      try {
-        const animGltf = await loadGltf(ANIMATION_URLS[pose]);
-        const mixer = new THREE.AnimationMixer(avatarModel);
-        mixerRef.current = mixer;
-        if (animGltf.animations.length > 0) {
-          mixer.clipAction(animGltf.animations[0]).play();
-        }
-      } catch {
-        if (avatarGltf.animations.length > 0) {
-          const mixer = new THREE.AnimationMixer(avatarModel);
-          mixerRef.current = mixer;
-          mixer.clipAction(avatarGltf.animations[0]).play();
-        }
-      }
-
-      setShowFallback(false);
-      const clock = new THREE.Clock();
-
-      const animate = () => {
-        animationRef.current = requestAnimationFrame(animate);
-        mixerRef.current?.update(clock.getDelta());
-        if (autoRotate) {
-          avatarModel.rotation.y += 0.005;
-        }
-        renderer.render(scene, camera);
-        gl.endFrameEXP();
-      };
-
-      animate();
-    } catch (error) {
-      console.error('Error loading 3D avatar:', error);
-      setShowFallback(true);
-      renderFallbackSphere(scene, camera, renderer, gl, teamColor);
+    let rotateRunner: Animated.CompositeAnimation | null = null;
+    if (autoRotate) {
+      rotateRunner = Animated.loop(
+        Animated.sequence([
+          Animated.timing(rotate, { toValue: 1, duration: 3200, useNativeDriver: true }),
+          Animated.timing(rotate, { toValue: -1, duration: 3200, useNativeDriver: true }),
+          Animated.timing(rotate, { toValue: 0, duration: 1600, useNativeDriver: true }),
+        ])
+      );
+      rotateRunner.start();
     }
+
+    return () => {
+      floatRunner.stop();
+      rotateRunner?.stop();
+    };
+  }, [autoRotate, float, rotate]);
+
+  function adjustZoom(next: number) {
+    Animated.spring(zoom, { toValue: next, useNativeDriver: true }).start();
   }
 
-  if (!isFocused || showFallback || Platform.OS === 'web') {
-    return (
-      <View style={[styles.fallbackWrap, { width, height }]}>
-        <AvatarPlaceholder size={height > 220 ? 'lg' : 'md'} teamColor={teamColor} />
-      </View>
-    );
-  }
+  const rotateY = rotate.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ['-18deg', '18deg'],
+  });
+  const translateY = float.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -8],
+  });
+  const shadowScale = float.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0.84],
+  });
 
-  return <GLView style={{ width, height }} onContextCreate={onContextCreate} />;
+  return (
+    <View style={[styles.stage, { width, height }]} {...panResponder.panHandlers}>
+      <LinearGradient colors={gradients.card} style={styles.backdrop} />
+      <View style={styles.glowTop} />
+      <View style={styles.glowBottom} />
+      <View style={styles.gridLine} />
+
+      {avatarName ? <Text style={styles.nameTag} numberOfLines={1}>{avatarName}</Text> : null}
+      <Text style={styles.poseTag}>{getPoseLabel(pose)}</Text>
+
+      <Animated.View
+        style={[
+          styles.shadow,
+          {
+            transform: [{ scaleX: shadowScale }],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.avatarWrap,
+          {
+            transform: [{ translateY }, { rotateY }, { scale: zoom }],
+          },
+        ]}
+      >
+        <AvatarPlaceholder
+          size={height > 220 ? 'lg' : 'md'}
+          teamColor={teamColor}
+          customization={avatar}
+        />
+      </Animated.View>
+
+      {showControls ? (
+        <View style={styles.controls}>
+          <TouchableOpacity style={styles.controlButton} onPress={() => adjustZoom(1.1)}>
+            <Text style={styles.controlText}>+</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.controlButton} onPress={() => adjustZoom(0.94)}>
+            <Text style={styles.controlText}>-</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      <Text style={styles.compatText}>Vista Expo Go compatible</Text>
+    </View>
+  );
 }
 
-function renderFallbackSphere(
-  scene: THREE.Scene,
-  camera: THREE.PerspectiveCamera,
-  renderer: Renderer,
-  gl: ExpoWebGLRenderingContext,
-  teamColor: string
-) {
-  const geometry = new THREE.SphereGeometry(0.5, 32, 32);
-  const material = new THREE.MeshLambertMaterial({ color: new THREE.Color(teamColor) });
-  const sphere = new THREE.Mesh(geometry, material);
-  scene.add(sphere);
-
-  const animate = () => {
-    requestAnimationFrame(animate);
-    sphere.rotation.y += 0.01;
-    renderer.render(scene, camera);
-    gl.endFrameEXP();
+function getPoseLabel(pose: AvatarPose) {
+  const labels: Record<AvatarPose, string> = {
+    jogging: 'Trotando',
+    stretching: 'Estirando',
+    idle: 'Previo',
+    arms_crossed: 'Capitan',
+    warmup: 'Calentando',
   };
-  animate();
+  return labels[pose];
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 const styles = StyleSheet.create({
-  fallbackWrap: {
+  stage: {
+    alignItems: 'center',
+    borderColor: colors.border,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  glowTop: {
+    backgroundColor: 'rgba(210,181,255,0.28)',
+    borderRadius: 999,
+    height: 130,
+    position: 'absolute',
+    right: -36,
+    top: -28,
+    width: 130,
+  },
+  glowBottom: {
+    backgroundColor: 'rgba(111,140,255,0.18)',
+    borderRadius: 999,
+    bottom: -42,
+    height: 160,
+    left: -42,
+    position: 'absolute',
+    width: 160,
+  },
+  gridLine: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    bottom: 62,
+    height: 1,
+    left: 18,
+    position: 'absolute',
+    right: 18,
+  },
+  nameTag: {
+    color: colors.text,
+    fontFamily: font.bold,
+    fontSize: 12,
+    fontWeight: '900',
+    left: 14,
+    position: 'absolute',
+    right: 86,
+    top: 14,
+  },
+  poseTag: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    color: colors.textMuted,
+    fontFamily: font.semiBold,
+    fontSize: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    position: 'absolute',
+    right: 12,
+    top: 12,
+  },
+  avatarWrap: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  shadow: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 999,
+    bottom: 44,
+    height: 18,
+    position: 'absolute',
+    width: 126,
+  },
+  controls: {
+    bottom: 12,
+    flexDirection: 'row',
+    gap: 8,
+    position: 'absolute',
+    right: 12,
+  },
+  controlButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  controlText: {
+    color: colors.text,
+    fontFamily: font.bold,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  compatText: {
+    bottom: 14,
+    color: colors.textSubtle,
+    fontFamily: font.medium,
+    fontSize: 10,
+    left: 14,
+    position: 'absolute',
   },
 });

@@ -1,6 +1,7 @@
 import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
 import type { TeamStats } from '@/lib/matchmaking';
 import { getLevel } from '@/lib/elo';
+import { colors, font, radii } from '@/lib/theme';
 
 type RankingRowProps = {
   position: number;
@@ -14,15 +15,15 @@ function getInitial(name: string) {
 }
 
 function getPositionBackground(position: number) {
-  if (position <= 3) return '#fef3c7';
-  if (position <= 10) return '#f9fafb';
-  return '#ffffff';
+  if (position <= 3) return '#2f2841';
+  if (position <= 10) return colors.surfaceSoft;
+  return colors.surface;
 }
 
 function getMedal(position: number) {
-  if (position === 1) return '🥇';
-  if (position === 2) return '🥈';
-  if (position === 3) return '🥉';
+  if (position === 1) return '1';
+  if (position === 2) return '2';
+  if (position === 3) return '3';
   return null;
 }
 
@@ -44,7 +45,7 @@ export function RankingRow({ position, team, isMyTeam = false, onPress }: Rankin
     >
       <View style={styles.positionColumn}>
         {medal ? (
-          <Text style={styles.medal}>{medal}</Text>
+          <Text style={styles.medal}>#{medal}</Text>
         ) : (
           <Text style={[styles.position, position <= 10 && styles.positionTopTen]}>
             {position.toLocaleString('es-CL')}
@@ -79,7 +80,7 @@ export function RankingRow({ position, team, isMyTeam = false, onPress }: Rankin
 
       <View style={styles.eloColumn}>
         <Text style={[styles.elo, { color: level.badgeColor }]}>
-          ⚡ {team.elo.toLocaleString('es-CL')}
+          {team.elo.toLocaleString('es-CL')}
         </Text>
         <Text style={[styles.winRate, { color: level.badgeColor }]} numberOfLines={1}>
           {level.title}
@@ -93,41 +94,43 @@ export function RankingRow({ position, team, isMyTeam = false, onPress }: Rankin
 const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
-    borderRadius: 12,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   myTeamRow: {
-    backgroundColor: '#fefce8',
-    borderLeftColor: '#f59e0b',
+    backgroundColor: '#332b45',
+    borderLeftColor: colors.accent,
     borderLeftWidth: 3,
   },
   positionColumn: { alignItems: 'center', width: 44 },
-  medal: { fontSize: 24 },
-  position: { color: '#6b7280', fontSize: 18, fontWeight: '900' },
-  positionTopTen: { color: '#d97706' },
+  medal: { color: colors.accent, fontFamily: font.extraBold, fontSize: 18, fontWeight: '900' },
+  position: { color: colors.textMuted, fontFamily: font.bold, fontSize: 18, fontWeight: '900' },
+  positionTopTen: { color: colors.accent },
   teamColumn: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: 10 },
   avatar: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.accent,
     borderRadius: 20,
     height: 40,
     justifyContent: 'center',
     width: 40,
   },
-  avatarText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
+  avatarText: { color: colors.background, fontFamily: font.extraBold, fontSize: 16, fontWeight: '900' },
   teamText: { flex: 1 },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: 5 },
-  name: { color: '#111827', flexShrink: 1, fontSize: 15, fontWeight: '900' },
-  mineText: { color: '#16a34a', fontSize: 12, fontWeight: '900' },
+  name: { color: colors.text, flexShrink: 1, fontFamily: font.bold, fontSize: 15, fontWeight: '900' },
+  mineText: { color: colors.accent, fontFamily: font.bold, fontSize: 12, fontWeight: '900' },
   miniStats: { flexDirection: 'row', gap: 6, marginTop: 4 },
-  miniStat: { fontSize: 12, fontWeight: '800' },
-  winText: { color: '#16a34a' },
-  drawText: { color: '#ca8a04' },
-  lossText: { color: '#dc2626' },
+  miniStat: { fontFamily: font.semiBold, fontSize: 12, fontWeight: '800' },
+  winText: { color: colors.success },
+  drawText: { color: colors.warning },
+  lossText: { color: colors.danger },
   eloColumn: { alignItems: 'flex-end', width: 80 },
-  elo: { color: '#d97706', fontSize: 20, fontWeight: '900' },
-  winRate: { color: '#6b7280', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  elo: { color: colors.accent, fontFamily: font.extraBold, fontSize: 20, fontWeight: '900' },
+  winRate: { color: colors.textMuted, fontFamily: font.semiBold, fontSize: 12, fontWeight: '700', marginTop: 2 },
 });

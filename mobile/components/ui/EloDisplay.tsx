@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { getLevel } from '@/lib/elo';
 import { ProgressBar } from '@/components/ui/ProgressBar';
+import { colors, font, radii } from '@/lib/theme';
 
 type EloDisplayProps = {
   elo: number;
@@ -33,7 +34,7 @@ export default function EloDisplay({
       </View>
 
       {showLevel ? (
-        <View style={[styles.levelBadge, { backgroundColor: `${level.badgeColor}20` }]}>
+        <View style={[styles.levelBadge, { backgroundColor: `${level.badgeColor}22` }]}>
           <Text style={[styles.levelText, { color: level.badgeColor }]}>
             {level.icon} {level.title}
           </Text>
@@ -58,19 +59,21 @@ export default function EloDisplay({
 const styles = StyleSheet.create({
   container: { gap: 8 },
   eloRow: { alignItems: 'flex-start' },
-  eloText: { fontWeight: '900' },
+  eloText: { fontFamily: font.extraBold, fontWeight: '900' },
   levelBadge: {
     alignSelf: 'flex-start',
-    borderRadius: 999,
+    borderRadius: radii.pill,
+    borderColor: colors.border,
+    borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  levelText: { fontSize: 12, fontWeight: '900' },
+  levelText: { fontFamily: font.bold, fontSize: 12, fontWeight: '900' },
   progressWrap: { gap: 5 },
   progressHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  progressLabel: { color: '#6b7280', fontSize: 11, fontWeight: '800' },
+  progressLabel: { color: colors.textSubtle, fontFamily: font.semiBold, fontSize: 11, fontWeight: '800' },
 });

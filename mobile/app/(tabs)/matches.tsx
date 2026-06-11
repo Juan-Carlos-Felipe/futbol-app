@@ -16,6 +16,7 @@ import { useMyMatches, useCreateMatch, Match, MatchStatus } from '@/hooks/useMat
 import { useMyTeams } from '@/hooks/useTeams';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { colors, font, radii, shadows, spacing } from '@/lib/theme';
 
 const STATUS_LABELS: Record<MatchStatus, string> = {
   seeking_opponent: 'Buscando rival',
@@ -142,7 +143,10 @@ export default function MatchesScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Partidos</Text>
+        <View>
+          <Text style={styles.eyebrow}>Fixture</Text>
+          <Text style={styles.title}>Partidos</Text>
+        </View>
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => {
@@ -228,90 +232,92 @@ export default function MatchesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117' },
+  container: { flex: 1, backgroundColor: colors.background },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 24,
     paddingBottom: 8,
   },
-  title: { fontSize: 24, fontWeight: '800', color: '#fff' },
+  eyebrow: { color: colors.accent, fontFamily: font.bold, fontSize: 12, textTransform: 'uppercase' },
+  title: { fontSize: 28, fontWeight: '800', color: colors.white, fontFamily: font.extraBold },
   addBtn: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.accent,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
   },
-  addBtnText: { color: '#fff', fontWeight: '700' },
+  addBtnText: { color: colors.background, fontFamily: font.bold, fontWeight: '700' },
   list: { padding: 24, paddingTop: 8, flexGrow: 1 },
   card: {
-    backgroundColor: '#1a1d27',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#2a2d3a',
+    borderColor: colors.border,
+    ...shadows.card,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  date: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  status: { color: '#22c55e', fontSize: 12, fontWeight: '600' },
-  location: { color: '#888', marginTop: 8, fontSize: 14 },
+  date: { color: colors.white, fontFamily: font.bold, fontSize: 16, fontWeight: '700' },
+  status: { color: colors.accent, fontFamily: font.semiBold, fontSize: 12, fontWeight: '600' },
+  location: { color: colors.textSubtle, fontFamily: font.regular, marginTop: 8, fontSize: 14 },
   resultBtn: {
     alignSelf: 'flex-start',
-    borderColor: '#22c55e',
+    borderColor: colors.accent,
     borderRadius: 999,
     borderWidth: 1,
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
-  resultBtnText: { color: '#22c55e', fontSize: 12, fontWeight: '800' },
+  resultBtnText: { color: colors.accent, fontFamily: font.bold, fontSize: 12, fontWeight: '800' },
   empty: { alignItems: 'center', marginTop: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  emptyHint: { color: '#888', marginTop: 4, textAlign: 'center', paddingHorizontal: 24 },
+  emptyText: { color: colors.white, fontFamily: font.bold, fontSize: 18, fontWeight: '600' },
+  emptyHint: { color: colors.textSubtle, fontFamily: font.regular, marginTop: 4, textAlign: 'center', paddingHorizontal: 24 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modal: {
-    backgroundColor: '#1a1d27',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
   },
-  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 16 },
-  modalLabel: { color: '#888', fontSize: 12, marginBottom: 8 },
+  modalTitle: { color: colors.white, fontFamily: font.bold, fontSize: 18, fontWeight: '700', marginBottom: 16 },
+  modalLabel: { color: colors.textSubtle, fontFamily: font.medium, fontSize: 12, marginBottom: 8 },
   teamChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#0f1117',
+    backgroundColor: colors.backgroundDeep,
     marginRight: 8,
     marginBottom: 12,
   },
-  teamChipActive: { backgroundColor: '#22c55e' },
-  teamChipText: { color: '#fff', fontWeight: '600' },
+  teamChipActive: { backgroundColor: colors.accent },
+  teamChipText: { color: colors.white, fontFamily: font.semiBold, fontWeight: '600' },
   input: {
-    backgroundColor: '#0f1117',
-    color: '#fff',
+    backgroundColor: colors.backgroundDeep,
+    color: colors.white,
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#2a2d3a',
+    borderColor: colors.border,
   },
-  modalHint: { color: '#666', fontSize: 12, marginBottom: 16 },
+  modalHint: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 12, marginBottom: 16 },
   createBtn: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginBottom: 12,
   },
-  createBtnText: { color: '#fff', fontWeight: '700' },
-  cancel: { color: '#888', textAlign: 'center' },
+  createBtnText: { color: colors.background, fontFamily: font.bold, fontWeight: '700' },
+  cancel: { color: colors.textSubtle, fontFamily: font.medium, textAlign: 'center' },
 });

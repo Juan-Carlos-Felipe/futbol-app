@@ -2,12 +2,25 @@ import { useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
+const AUTH_TIMEOUT_MS = 4500;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs = AUTH_TIMEOUT_MS): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Auth request timeout')), timeoutMs);
+
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => clearTimeout(timeout));
+  });
+}
+
 async function getValidSession(session: Session | null) {
   if (!session) return null;
 
-  const { error } = await supabase.auth.getUser();
+  const { error } = await withTimeout(supabase.auth.getUser());
   if (error) {
-    await supabase.auth.signOut();
+    await withTimeout(supabase.auth.signOut()).catch(() => null);
     return null;
   }
 
@@ -21,8 +34,7 @@ export function useAuth() {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth
-      .getSession()
+    withTimeout(supabase.auth.getSession())
       .then(async ({ data: { session } }) => {
         const validSession = await getValidSession(session);
         if (mounted) setSession(validSession);

@@ -18,6 +18,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import { useVenues } from '@/hooks/useVenues';
 import { Venue, VenueFilters } from '@/lib/venues';
+import { colors, font, radii, shadows, spacing } from '@/lib/theme';
 
 const isWeb = Platform.OS === 'web';
 
@@ -236,23 +237,24 @@ export default function CanchasScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1117',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingTop: 24,
   },
   headerTitle: {
-    color: '#fff',
-    fontSize: 26,
+    color: colors.white,
+    fontFamily: font.extraBold,
+    fontSize: 28,
     fontWeight: '800',
   },
   toggleRow: {
     flexDirection: 'row',
-    backgroundColor: isWeb ? '#f3f4f6' : '#1a1d27',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 4,
   },
@@ -265,15 +267,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   toggleBtnActive: {
-    backgroundColor: isWeb ? '#16a34a' : '#22c55e',
+    backgroundColor: colors.accent,
   },
   toggleText: {
-    color: isWeb ? '#6b7280' : '#888',
+    color: colors.textSubtle,
+    fontFamily: font.semiBold,
     fontSize: 12,
     fontWeight: '600',
   },
   toggleTextActive: {
-    color: isWeb ? '#ffffff' : '#07120b',
+    color: colors.background,
   },
   webMapFallback: {
     flex: 1,
@@ -282,7 +285,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   webMapFallbackText: {
-    color: '#888',
+    color: colors.textSubtle,
+    fontFamily: font.regular,
     fontSize: 16,
     marginBottom: 16,
   },
@@ -302,72 +306,78 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#1a1d27',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#2a2d3a',
+    borderColor: colors.border,
     marginRight: 8,
   },
   chipActive: {
-    backgroundColor: '#22c55e',
-    borderColor: '#22c55e',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   chipText: {
-    color: '#aaa',
+    color: colors.textMuted,
+    fontFamily: font.medium,
     fontSize: 13,
     fontWeight: '500',
   },
   chipTextActive: {
-    color: '#07120b',
+    color: colors.background,
+    fontFamily: font.bold,
     fontWeight: '700',
   },
   locationWarning: {
     marginHorizontal: 16,
     marginBottom: 8,
-    backgroundColor: '#2a2000',
-    borderRadius: 8,
+    backgroundColor: '#f4b74022',
+    borderRadius: radii.md,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#facc15',
+    borderColor: colors.warning,
   },
   locationWarningText: {
-    color: '#facc15',
+    color: colors.warning,
+    fontFamily: font.semiBold,
     fontSize: 13,
     fontWeight: '600',
   },
   locationWarningButton: {
     marginTop: 8,
     alignSelf: 'flex-start',
-    backgroundColor: '#facc15',
+    backgroundColor: colors.warning,
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
   locationWarningButtonText: {
-    color: '#111827',
+    color: colors.background,
+    fontFamily: font.bold,
     fontWeight: '700',
   },
   retryButton: {
     marginTop: 16,
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
   },
   retryButtonText: {
-    color: '#07120b',
+    color: colors.background,
+    fontFamily: font.bold,
     fontWeight: '700',
   },
   clearFilterButton: {
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#22c55e',
+    borderColor: colors.accent,
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
   clearFilterButtonText: {
-    color: '#22c55e',
+    color: colors.accent,
+    fontFamily: font.bold,
     fontWeight: '700',
   },
   content: {
@@ -384,13 +394,15 @@ const styles = StyleSheet.create({
     fontSize: 48,
   },
   emptyTitle: {
-    color: '#fff',
+    color: colors.white,
+    fontFamily: font.bold,
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
   },
   emptySubtitle: {
-    color: '#888',
+    color: colors.textSubtle,
+    fontFamily: font.regular,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { colors } from '@/lib/theme';
 
 type ProgressBarProps = {
   progress: number;
@@ -7,7 +8,7 @@ type ProgressBarProps = {
   height?: number;
 };
 
-export function ProgressBar({ progress, color = '#16a34a', height = 8 }: ProgressBarProps) {
+export function ProgressBar({ progress, color = colors.accent, height = 8 }: ProgressBarProps) {
   const width = useRef(new Animated.Value(Math.max(0, Math.min(100, progress)))).current;
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export function ProgressBar({ progress, color = '#16a34a', height = 8 }: Progres
 
 const styles = StyleSheet.create({
   track: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.surfaceSoft,
     overflow: 'hidden',
     width: '100%',
   },
