@@ -1,45 +1,80 @@
 import { WebView } from 'react-native-webview';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { colors } from '@/lib/theme';
 
-const RPM_SUBDOMAIN = 'futbolapp';
+const RPM_SUBDOMAIN = 'futbolapp'; // Subdominio predeterminado o el del proyecto
 
 type RPMWebViewProps = {
   onAvatarCreated: (url: string) => void;
+  onCancel?: () => void;
 };
 
-export default function RPMWebView({ onAvatarCreated }: RPMWebViewProps) {
-  function handleMessage(event: { nativeEvent: { data: string } }) {
+export default function RPMWebView({ onAvatarCreated, onCancel }: RPMWebViewProps) {
+  function handleMessage(event: any) {
     try {
-      const data = JSON.parse(event.nativeEvent.data) as {
-        source?: string;
-        eventName?: string;
-        data?: { url?: string };
-      };
+      const data = JSON.parse(event.nativeEvent.data);
 
-      if (
-        data.source === 'readyplayerme' &&
-        data.eventName === 'v1.avatar.exported' &&
-        data.data?.url
-      ) {
-        onAvatarCreated(data.data.url);
+      if (data.source === 'readyplayerme') {
+        if (data.eventName === 'v1.avatar.exported' && data.data?.url) {
+          onAvatarCreated(data.data.url);
+        } else if (data.eventName === 'v1.user.set') {
+          // Usuario logueado en RPM o iniciado
+        }
       }
-    } catch {
-      // Ignore non-RPM messages from the embedded editor.
+    } catch (e) {
+      // Ignorar mensajes no válidos
     }
   }
 
+  // URL del editor de Ready Player Me con parámetros para optimizar la experiencia mobile
+  // frameApi: habilita la comunicación por mensajes
+  // headOnly: falso para ver el cuerpo completo (necesario para FIFA card)
+  const uri = `https://${RPM_SUBDOMAIN}.readyplayer.me/avatar?frameApi&clearCache&bodyType=fullbody`;
+
   return (
-    <WebView
-      source={{ uri: `https://${RPM_SUBDOMAIN}.readyplayer.me/avatar?frameApi` }}
-      style={{ flex: 1 }}
-      onMessage={handleMessage}
-      javaScriptEnabled
-      injectedJavaScript={`
-        window.addEventListener('message', (event) => {
-          if (event.data && event.data.source === 'readyplayerme') {
-            window.ReactNativeWebView.postMessage(JSON.stringify(event.data));
-          }
-        });
-      `}
-    />
+    <View style={styles.container}>
+      <WebView
+        source={{ uri }}
+        style={styles.webview}
+        onMessage={handleMessage}
+        javaScriptEnabled
+        domStorageEnabled
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={false}
+        originWhitelist={['*']}
+        startInLoadingState
+        renderLoading={() => (
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.accent} size="large" />
+          </View>
+        )}
+        injectedJavaScript={`
+          (function() {
+            window.addEventListener('message', function(event) {
+              if (event.data && event.data.source === 'readyplayerme') {
+                window.ReactNativeWebView.postMessage(JSON.stringify(event.data));
+              }
+            });
+          })();
+        `}
+      />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  webview: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  loading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+  },
+});

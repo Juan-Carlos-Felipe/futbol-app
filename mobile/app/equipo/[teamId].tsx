@@ -19,6 +19,7 @@ import {
   useTeamProfile,
   useTeamRecentForm,
 } from '@/hooks/useMatchmaking';
+import { getAvatarRenderUrl } from '@/lib/avatar';
 import EloDisplay from '@/components/ui/EloDisplay';
 import EloHistoryList from '@/components/ui/EloHistoryList';
 import type { TeamMatchHistoryItem, TeamStats } from '@/lib/matchmaking';
@@ -253,7 +254,14 @@ export default function TeamPublicProfileScreen() {
             return (
               <View key={member.id} style={styles.memberRow}>
                 <View style={styles.memberAvatar}>
-                  <Text style={styles.memberAvatarText}>{getInitial(member.display_name)}</Text>
+                  {member.avatar_3d_url ? (
+                    <Image
+                      source={{ uri: getAvatarRenderUrl(member.avatar_3d_url, member.avatar_pose as any) || '' }}
+                      style={styles.avatarImage}
+                    />
+                  ) : (
+                    <Text style={styles.memberAvatarText}>{getInitial(member.display_name)}</Text>
+                  )}
                 </View>
                 <View style={styles.memberBody}>
                   <View style={styles.memberNameRow}>
@@ -478,6 +486,7 @@ const styles = StyleSheet.create({
     width: 40,
   },
   memberAvatarText: { color: '#ffffff', fontSize: 15, fontWeight: '900' },
+  avatarImage: { width: 40, height: 40, borderRadius: 20 },
   memberBody: { flex: 1 },
   memberNameRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   memberName: { color: '#111827', flexShrink: 1, fontSize: 14, fontWeight: '900' },

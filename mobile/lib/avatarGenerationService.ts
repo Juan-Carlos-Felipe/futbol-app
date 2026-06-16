@@ -1,78 +1,27 @@
 import {
   DEMO_AVATAR_URL,
   type AvatarConfig,
-  type AvatarCustomization,
-  type AvatarPhotoSource,
 } from '@/lib/avatar';
 
-type AvatarGenerationRequest = {
-  userId: string;
-  photo: AvatarPhotoSource;
-  avatarName: string;
-  teamColor: string;
-  customization: AvatarCustomization;
-};
-
-type AvatarGenerationResult = {
-  avatarUrl: string;
-  provider: string | null;
-  modelFormat: 'glb' | 'gltf';
-  message: string;
-};
-
-function getAvatarApiUrl() {
-  return process.env.EXPO_PUBLIC_AVATAR_GENERATION_API_URL;
-}
-
+/**
+ * Servicio para manejar la generación de avatares.
+ * Ahora simplificado para delegar la generación a Ready Player Me directamente vía WebView.
+ */
 export const avatarGenerationService = {
   isConfigured() {
-    return Boolean(getAvatarApiUrl());
+    return true; // Siempre configurado vía WebView
   },
 
-  async generateFromPhoto(request: AvatarGenerationRequest): Promise<AvatarGenerationResult> {
-    const apiUrl = getAvatarApiUrl();
-
-    if (!apiUrl) {
-      return {
-        avatarUrl: DEMO_AVATAR_URL,
-        provider: null,
-        modelFormat: 'glb',
-        message:
-          'Modo demo activo: no hay proveedor de generacion configurado, se usara un avatar base editable.',
-      };
-    }
-
-    const formData = new FormData();
-    formData.append('userId', request.userId);
-    formData.append('avatarName', request.avatarName);
-    formData.append('teamColor', request.teamColor);
-    formData.append('customization', JSON.stringify(request.customization));
-    formData.append('photo', {
-      uri: request.photo.uri,
-      name: 'avatar-selfie.jpg',
-      type: 'image/jpeg',
-    } as unknown as Blob);
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('El proveedor externo no pudo generar el avatar.');
-    }
-
-    const data = (await response.json()) as Partial<AvatarGenerationResult>;
-
-    if (!data.avatarUrl) {
-      throw new Error('La respuesta del proveedor no incluyo un modelo 3D.');
-    }
-
+  /**
+   * Este método se mantiene por compatibilidad pero el flujo principal
+   * ahora es a través de RPMWebView.
+   */
+  async generateFromPhoto(): Promise<any> {
     return {
-      avatarUrl: data.avatarUrl,
-      provider: data.provider ?? 'external',
-      modelFormat: data.modelFormat ?? 'glb',
-      message: data.message ?? 'Avatar generado correctamente.',
+      avatarUrl: DEMO_AVATAR_URL,
+      provider: 'readyplayerme',
+      modelFormat: 'glb',
+      message: 'Usa el botón de Ready Player Me para generar desde foto.',
     };
   },
 

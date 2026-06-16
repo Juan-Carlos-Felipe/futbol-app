@@ -10,10 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
-import AvatarPreview from '@/components/avatar/AvatarPreview';
 import AvatarSetup from '@/components/avatar/AvatarSetup';
-import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
+import FifaCard from '@/components/ui/FifaCard';
 import EloDisplay from '@/components/ui/EloDisplay';
 import EloHistoryList from '@/components/ui/EloHistoryList';
 import { ProgressBar } from '@/components/ui/ProgressBar';
@@ -24,13 +22,12 @@ import { useTeamStats } from '@/hooks/useTeamStats';
 import { useMyTeams } from '@/hooks/useTeams';
 import { signOut } from '@/lib/auth';
 import {
-  DEFAULT_TEAM_COLOR,
   loadAvatarConfig,
   type AvatarConfig,
 } from '@/lib/avatar';
 import { getFifaRating } from '@/lib/elo';
 import { colors, font, radii, shadows, spacing } from '@/lib/theme';
-import { SectionTitle, SportCard, StatPill } from '@/components/ui/SportPrimitives';
+import { SectionTitle, SportCard } from '@/components/ui/SportPrimitives';
 
 const SKILLS = [
   { key: 'attack', label: 'Ataque', icon: 'ATQ' },
@@ -56,7 +53,7 @@ export default function ProfileScreen() {
   const updateProfile = useUpdateProfile();
   const activeTeamId = useMemo(() => teams?.[0]?.team_id ?? null, [teams]);
   const { stats: playerStats } = usePlayerStats(userId);
-  const { stats: teamStats, winRate: teamWinRate } = useTeamStats(activeTeamId);
+  const { stats: teamStats } = useTeamStats(activeTeamId);
   const { ranking } = useRanking(50);
   const { form } = useTeamRecentForm(activeTeamId);
   const [displayName, setDisplayName] = useState('');
@@ -113,36 +110,28 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.avatarHero}>
-        <View style={styles.avatarStage}>
-          {avatarConfig?.avatarUrl ? (
-            <AvatarPreview
-              avatarUrl={avatarConfig.avatarUrl}
-              pose={avatarConfig.selectedPose}
-              teamColor={avatarConfig.teamColor}
-              customization={avatarConfig.customization}
-              avatarName={avatarConfig.avatarName}
-              width={160}
-              height={240}
-              autoRotate
-              showControls={false}
-            />
-          ) : (
-            <AvatarPlaceholder
-              size="lg"
-              teamColor={avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR}
-              customization={avatarConfig?.customization}
-              label={avatarConfig?.avatarName}
-            />
-          )}
-          <View style={styles.ratingOverlay}>
-            <AnimatedNumber value={fifaRating} style={styles.ratingOverlayValue} />
-            <Text style={styles.ratingOverlayLabel}>RAT</Text>
-          </View>
-        </View>
+      <View style={styles.headerSection}>
+        <Text style={styles.headerKicker}>PRO PLAYER CARD</Text>
+        <FifaCard
+          name={profile?.display_name ?? 'Jugador'}
+          rating={fifaRating}
+          elo={playerElo}
+          avatarUrl={avatarConfig?.avatarUrl ?? null}
+          pose={avatarConfig?.selectedPose}
+          teamColor={avatarConfig?.teamColor}
+          stats={{
+            pac: skills.speed,
+            sho: skills.attack,
+            pas: Math.round((skills.attack + skills.stamina) / 2),
+            dri: Math.round((skills.speed + skills.attack) / 2),
+            def: skills.defense,
+            phy: skills.stamina,
+          }}
+        />
+
         {userId ? (
           <TouchableOpacity style={styles.editAvatarButton} onPress={() => setShowAvatarSetup(true)}>
-            <Text style={styles.editAvatarText}>Editar avatar</Text>
+            <Text style={styles.editAvatarText}>⚙️ PERSONALIZAR CARTA</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -170,22 +159,16 @@ export default function ProfileScreen() {
             }}
           >
             <Text style={styles.name}>{profile?.display_name ?? 'Jugador'}</Text>
-            <Text style={styles.editHint}>Toca para editar</Text>
+            <Text style={styles.editHint}>Toca para editar nombre</Text>
           </TouchableOpacity>
         )}
         <Text style={styles.email}>{profile?.email}</Text>
       </View>
 
       <View style={styles.statsCard}>
-        <Text style={styles.statsEyebrow}>PLAYER CARD</Text>
-        <View style={styles.ratingRow}>
-          <View style={styles.fifaRatingCard}>
-            <AnimatedNumber value={fifaRating} style={styles.fifaRating} />
-            <Text style={styles.fifaRatingLabel}>RAT</Text>
-          </View>
-          <View style={styles.eloDisplayWrap}>
-            <EloDisplay elo={playerElo} showLevel size="lg" />
-          </View>
+        <Text style={styles.statsEyebrow}>ESTADÍSTICAS GLOBALES</Text>
+        <View style={styles.eloDisplayWrap}>
+          <EloDisplay elo={playerElo} showLevel size="lg" />
         </View>
 
         <View style={styles.statsGrid}>
@@ -198,7 +181,6 @@ export default function ProfileScreen() {
         </View>
 
         <ProgressRow label="% victorias como jugador" value={playerWinRate} />
-        <Text style={styles.eloHint}>Ranking personal basado en tus resultados</Text>
       </View>
 
       <SportCard style={styles.teamStatsCard}>
@@ -213,7 +195,6 @@ export default function ProfileScreen() {
           <StatTile label="Perdidos" value={teamStats?.losses ?? 0} color="#ef4444" />
           <StatTile label="Empates" value={teamStats?.draws ?? 0} color="#f59e0b" />
         </View>
-        <ProgressRow label="Win rate del equipo" value={teamWinRate} />
       </SportCard>
 
       <SportCard style={styles.teamStatsCard}>
@@ -234,22 +215,6 @@ export default function ProfileScreen() {
           <EloHistoryList teamId={activeTeamId} />
         </SportCard>
       ) : null}
-
-      <SportCard style={styles.section}>
-        <SectionTitle title="Habilidades" />
-        {SKILLS.map(({ key, label, icon }) => (
-          <View key={key} style={styles.skillRow}>
-            <Text style={styles.skillLabel}>
-              {icon} {label}
-            </Text>
-            <View style={styles.skillBarBg}>
-              <View style={[styles.skillBarFill, { width: `${skills[key]}%` }]} />
-            </View>
-            <Text style={styles.skillValue}>{skills[key]}</Text>
-          </View>
-        ))}
-        <Text style={styles.skillNote}>Las habilidades suben con la actividad en partidos</Text>
-      </SportCard>
 
       <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
         <Text style={styles.logoutText}>Cerrar sesion</Text>
@@ -278,7 +243,7 @@ export default function ProfileScreen() {
 function StatTile({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <View style={styles.statTile}>
-      <AnimatedNumber value={value} style={[styles.statTileValue, { color }]} />
+      <Text style={[styles.statTileValue, { color }]}>{value}</Text>
       <Text style={styles.statTileLabel}>{label}</Text>
     </View>
   );
@@ -314,47 +279,36 @@ const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   content: { padding: spacing.lg, paddingBottom: 120 },
   centered: { alignItems: 'center', justifyContent: 'center' },
-  avatarHero: {
+  headerSection: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 28,
-    borderWidth: 1,
-    marginBottom: 24,
-    overflow: 'hidden',
-    paddingTop: 12,
-    ...shadows.card,
+    marginBottom: 32,
   },
-  avatarStage: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 250,
-    width: '100%',
+  headerKicker: {
+    color: colors.accent,
+    fontFamily: font.extraBold,
+    fontSize: 14,
+    letterSpacing: 3,
+    marginBottom: 10,
   },
-  ratingOverlay: {
-    alignItems: 'center',
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    bottom: 18,
-    left: 24,
-    minWidth: 68,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    position: 'absolute',
-  },
-  ratingOverlayValue: { color: colors.background, fontFamily: font.extraBold, fontSize: 28, fontWeight: '900' },
-  ratingOverlayLabel: { color: colors.background, fontFamily: font.extraBold, fontSize: 10, fontWeight: '900' },
   editAvatarButton: {
-    backgroundColor: '#D2B5FF22',
-    borderRadius: 999,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    backgroundColor: colors.surfaceSoft,
+    borderColor: '#f59e0b44',
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    marginTop: -20,
+    zIndex: 20,
+    ...shadows.glow,
   },
-  editAvatarText: { color: colors.accent, fontFamily: font.bold, fontSize: 13, fontWeight: '900' },
-  section: { marginBottom: 28 },
+  editAvatarText: {
+    color: '#f59e0b',
+    fontFamily: font.extraBold,
+    fontSize: 13,
+  },
+  section: { marginBottom: 28, alignItems: 'center' },
   row: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  name: { color: colors.white, fontFamily: font.extraBold, fontSize: 26, fontWeight: '800' },
+  name: { color: colors.white, fontFamily: font.extraBold, fontSize: 32, fontWeight: '800' },
   editHint: { color: colors.accent, fontFamily: font.medium, fontSize: 12, marginTop: 2 },
   email: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 14, marginTop: 4 },
   input: {
@@ -399,21 +353,10 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 12,
   },
-  ratingRow: { alignItems: 'center', flexDirection: 'row', gap: 14, marginBottom: 14 },
-  fifaRatingCard: {
-    alignItems: 'center',
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    minWidth: 72,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  fifaRating: { color: colors.background, fontFamily: font.extraBold, fontSize: 34, fontWeight: '900' },
-  fifaRatingLabel: { color: colors.background, fontFamily: font.extraBold, fontSize: 11, fontWeight: '900', marginTop: -2 },
-  eloDisplayWrap: { flex: 1 },
+  eloDisplayWrap: { marginBottom: 20 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   statTile: { alignItems: 'center', paddingVertical: 10, width: '33.333%' },
-  statTileValue: { fontSize: 28, fontWeight: '900' },
+  statTileValue: { fontSize: 28, fontWeight: '900', fontFamily: font.extraBold },
   statTileLabel: { color: colors.textSubtle, fontFamily: font.semiBold, fontSize: 11, fontWeight: '800', marginTop: 3 },
   progressWrap: { marginTop: 14 },
   progressLabelRow: {
@@ -453,24 +396,13 @@ const styles = StyleSheet.create({
   },
   formDotText: { fontSize: 13, fontWeight: '900' },
   formHint: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 12, marginTop: 10 },
-  skillRow: { alignItems: 'center', flexDirection: 'row', gap: 10, marginBottom: 12 },
-  skillLabel: { color: colors.white, fontFamily: font.medium, fontSize: 14, width: 118 },
-  skillBarBg: {
-    backgroundColor: colors.surfaceSoft,
-    borderRadius: 3,
-    flex: 1,
-    height: 6,
-    overflow: 'hidden',
-  },
-  skillBarFill: { backgroundColor: colors.accent, borderRadius: 3, height: '100%' },
-  skillValue: { color: colors.textSubtle, fontFamily: font.medium, fontSize: 12, textAlign: 'right', width: 30 },
-  skillNote: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 11, fontStyle: 'italic', marginTop: 8 },
   logoutBtn: {
     alignItems: 'center',
     borderColor: colors.danger,
     borderRadius: 12,
     borderWidth: 1,
     padding: 14,
+    marginTop: 20,
   },
   logoutText: { color: colors.danger, fontFamily: font.semiBold, fontWeight: '600' },
 });
