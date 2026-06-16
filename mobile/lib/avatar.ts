@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 
-export type AvatarPose = 'jogging' | 'stretching' | 'idle' | 'arms_crossed' | 'warmup';
+export type AvatarPose = 'jogging' | 'stretching' | 'idle' | 'arms_crossed' | 'warmup' | 'power_stance';
 export type AvatarSkinTone = 'fair' | 'light' | 'tan' | 'brown' | 'deep';
 export type AvatarHairStyle = 'short' | 'fade' | 'curly' | 'long' | 'buzz';
 export type AvatarOutfit = 'home' | 'away' | 'keeper' | 'training';
@@ -97,6 +97,7 @@ export const POSE_LABELS: Record<AvatarPose, string> = {
   idle: 'Previo al partido',
   arms_crossed: 'Brazos cruzados',
   warmup: 'Calentando',
+  power_stance: 'Líder',
 };
 
 export const POSE_ICONS: Record<AvatarPose, string> = {
@@ -105,6 +106,7 @@ export const POSE_ICONS: Record<AvatarPose, string> = {
   idle: 'target',
   arms_crossed: 'strong',
   warmup: 'warm',
+  power_stance: 'flash',
 };
 
 export const AVATAR_POSES = Object.keys(POSE_LABELS) as AvatarPose[];
@@ -116,7 +118,38 @@ export const ANIMATION_URLS: Record<AvatarPose, string> = {
   idle: 'https://models.readyplayer.me/animations/idle.glb',
   arms_crossed: 'https://models.readyplayer.me/animations/arms-crossed.glb',
   warmup: 'https://models.readyplayer.me/animations/warmup.glb',
+  power_stance: 'https://models.readyplayer.me/animations/power-stance.glb',
 };
+
+/**
+ * Convierte una URL de Ready Player Me (.glb) a una imagen 2D (.png) usando el Render API.
+ * Esto permite mostrar el avatar realista sin necesidad de un motor 3D pesado.
+ */
+export function getAvatarRenderUrl(avatarUrl: string | null, pose: AvatarPose = 'idle') {
+  if (!avatarUrl) return null;
+
+  // Limpiar la URL base (quitar parámetros si existen)
+  const baseUrl = avatarUrl.split('?')[0].replace('.glb', '');
+
+  // Mapeo de poses a poses de renderizado de RPM
+  const poseMap: Record<AvatarPose, string> = {
+    idle: 'relaxed',
+    arms_crossed: 'power-stance',
+    jogging: 'relaxed',
+    stretching: 'relaxed',
+    warmup: 'relaxed',
+    power_stance: 'power-stance'
+  };
+
+  const renderPose = poseMap[pose] || 'relaxed';
+
+  // Parámetros del Render API para estética FIFA
+  // pose: postura del avatar
+  // expression: expresión facial
+  // background: transparente para ponerlo en la carta
+  // camera: portrait para busto
+  return `${baseUrl}.png?pose=${renderPose}&expression=focused&camera=portrait&background=0,0,0,0`;
+}
 
 function storageKey(userId: string) {
   return `avatar_config_${userId}`;

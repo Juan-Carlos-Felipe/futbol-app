@@ -112,6 +112,8 @@ export interface TeamMemberProfile {
   role: string | null;
   display_name: string;
   avatar_url: string | null;
+  avatar_3d_url?: string | null;
+  avatar_pose?: string | null;
   matches_played: number;
   wins: number;
   elo: number;
@@ -742,7 +744,9 @@ export async function getTeamMembers(teamId: string): Promise<TeamMemberProfile[
         role,
         users (
           display_name,
-          avatar_url
+          avatar_url,
+          avatar_3d_url,
+          avatar_pose
         )
       `
     )
@@ -812,6 +816,8 @@ async function hydrateTeamMembers(members: TeamMemberRow[]): Promise<TeamMemberP
         role: member.role ?? null,
         display_name: member.users?.display_name ?? 'Jugador',
         avatar_url: member.users?.avatar_url ?? null,
+        avatar_3d_url: member.users?.avatar_3d_url ?? null,
+        avatar_pose: member.users?.avatar_pose ?? null,
         matches_played: playerStats?.matches_played ?? 0,
         wins: playerStats?.wins ?? 0,
         elo: playerStats?.elo ?? 0,
