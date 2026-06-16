@@ -16,11 +16,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
-import AvatarPreview from '@/components/avatar/AvatarPreview';
+import AvatarComposer from '@/components/avatar/AvatarComposer';
 import AvatarSetup from '@/components/avatar/AvatarSetup';
 import { useMyActivityFeed, type FeedEvent } from '@/hooks/useActivityFeed';
 import { useAuth } from '@/hooks/useAuth';
-import { DEFAULT_TEAM_COLOR, loadAvatarConfig, type AvatarConfig } from '@/lib/avatar';
+import { supabase } from '@/lib/supabase';
+import { DEFAULT_TEAM_COLOR, type AvatarConfig } from '@/lib/avatar';
 import { colors, font, gradients, radii, shadows, spacing } from '@/lib/theme';
 import { SectionTitle, SportCard, StatPill } from '@/components/ui/SportPrimitives';
 
@@ -31,23 +32,43 @@ export default function FeedScreen() {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(null);
   const [showAvatarSetup, setShowAvatarSetup] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let mounted = true;
 
-    if (!userId) {
-      setAvatarConfig(null);
-      return;
+    async function loadData() {
+      if (!userId) {
+        setAvatarConfig(null);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('users')
+        .select('avatar_traits, avatar_pose, avatar_team_color')
+        .eq('id', userId)
+        .single();
+
+      if (mounted && data) {
+        setAvatarConfig({
+          userId,
+          avatarUrl: null,
+          avatarName: 'Mi Avatar',
+          selectedPose: data.avatar_pose || 'arms_crossed',
+          teamColor: data.avatar_team_color || '#16a34a',
+          customization: data.avatar_traits,
+          source: 'manual',
+          updatedAt: null,
+        } as AvatarConfig);
+      }
     }
 
-    loadAvatarConfig(userId).then((config) => {
-      if (mounted) setAvatarConfig(config);
-    });
+    loadData();
 
     return () => {
       mounted = false;
     };
-  }, [userId]);
+  }, [userId, refreshKey]);
 
   const teams = useMemo(() => {
     const map = new Map<string, string>();
@@ -130,11 +151,10 @@ export default function FeedScreen() {
       <AvatarSetupModal
         visible={showAvatarSetup}
         userId={userId}
-        avatarConfig={avatarConfig}
         onClose={() => setShowAvatarSetup(false)}
-        onComplete={(config) => {
-          setAvatarConfig(config);
+        onComplete={() => {
           setShowAvatarSetup(false);
+          setRefreshKey(prev => prev + 1);
         }}
       />
     </View>
@@ -164,16 +184,13 @@ function AvatarHero({
         <Text style={styles.heroSubtitle}>Actividad, partidos y rendimiento en tiempo real.</Text>
       </View>
       <View style={styles.heroAvatar}>
-        {avatarConfig?.avatarUrl ? (
-          <AvatarPreview
-            avatarUrl={avatarConfig.avatarUrl}
+        {avatarConfig?.customization ? (
+          <AvatarComposer
+            traits={avatarConfig.customization as any}
             pose={avatarConfig.selectedPose}
             teamColor={avatarConfig.teamColor}
-            customization={avatarConfig.customization}
-            avatarName={avatarConfig.avatarName}
             width={140}
             height={200}
-            showControls={false}
           />
         ) : (
           <>
@@ -193,21 +210,19 @@ function AvatarHero({
 function AvatarSetupModal({
   visible,
   userId,
-  avatarConfig,
   onClose,
   onComplete,
 }: {
   visible: boolean;
   userId: string | null;
-  avatarConfig: AvatarConfig | null;
   onClose: () => void;
-  onComplete: (config: AvatarConfig) => void;
+  onComplete: () => void;
 }) {
   if (!userId) return null;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <AvatarSetup userId={userId} currentConfig={avatarConfig} onComplete={onComplete} />
+      <AvatarSetup userId={userId} onClose={onClose} onComplete={onComplete} />
     </Modal>
   );
 }
