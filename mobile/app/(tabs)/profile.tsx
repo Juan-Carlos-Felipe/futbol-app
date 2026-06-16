@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
-import AvatarPreview from '@/components/avatar/AvatarPreview';
+import AvatarComposer from '@/components/avatar/AvatarComposer';
 import AvatarSetup from '@/components/avatar/AvatarSetup';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import EloDisplay from '@/components/ui/EloDisplay';
@@ -23,6 +23,7 @@ import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { useMyTeams } from '@/hooks/useTeams';
 import { signOut } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 import {
   DEFAULT_TEAM_COLOR,
   loadAvatarConfig,
@@ -63,6 +64,7 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(null);
   const [showAvatarSetup, setShowAvatarSetup] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const playerWinRate =
     playerStats && playerStats.matches_played > 0
@@ -77,19 +79,38 @@ export default function ProfileScreen() {
   useEffect(() => {
     let mounted = true;
 
-    if (!userId) {
-      setAvatarConfig(null);
-      return;
+    async function loadData() {
+      if (!userId) {
+        setAvatarConfig(null);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('users')
+        .select('avatar_traits, avatar_pose, avatar_team_color')
+        .eq('id', userId)
+        .single();
+
+      if (mounted && data) {
+        setAvatarConfig({
+          userId,
+          avatarUrl: null,
+          avatarName: 'Mi Avatar',
+          selectedPose: data.avatar_pose || 'arms_crossed',
+          teamColor: data.avatar_team_color || '#16a34a',
+          customization: data.avatar_traits,
+          source: 'manual',
+          updatedAt: null,
+        } as AvatarConfig);
+      }
     }
 
-    loadAvatarConfig(userId).then((config) => {
-      if (mounted) setAvatarConfig(config);
-    });
+    loadData();
 
     return () => {
       mounted = false;
     };
-  }, [userId]);
+  }, [userId, refreshKey]);
 
   if (isLoading) {
     return (
@@ -115,23 +136,18 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.avatarHero}>
         <View style={styles.avatarStage}>
-          {avatarConfig?.avatarUrl ? (
-            <AvatarPreview
-              avatarUrl={avatarConfig.avatarUrl}
+          {avatarConfig?.customization ? (
+            <AvatarComposer
+              traits={avatarConfig.customization as any}
               pose={avatarConfig.selectedPose}
               teamColor={avatarConfig.teamColor}
-              customization={avatarConfig.customization}
-              avatarName={avatarConfig.avatarName}
-              width={160}
-              height={240}
-              autoRotate
-              showControls={false}
+              width={260}
+              height={380}
             />
           ) : (
             <AvatarPlaceholder
               size="lg"
               teamColor={avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR}
-              customization={avatarConfig?.customization}
               label={avatarConfig?.avatarName}
             />
           )}
@@ -263,10 +279,10 @@ export default function ProfileScreen() {
         >
           <AvatarSetup
             userId={userId}
-            currentConfig={avatarConfig}
-            onComplete={(config) => {
-              setAvatarConfig(config);
+            onClose={() => setShowAvatarSetup(false)}
+            onComplete={() => {
               setShowAvatarSetup(false);
+              setRefreshKey(prev => prev + 1);
             }}
           />
         </Modal>
