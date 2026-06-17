@@ -12,10 +12,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AvatarConfigPanel from '@/components/avatar/AvatarConfig';
-import AvatarPreview from '@/components/avatar/AvatarPreview';
+import Avatar3DViewer from '@/components/avatar/Avatar3DViewer';
 import { avatarGenerationService } from '@/lib/avatarGenerationService';
 import {
-  DEMO_AVATAR_URL,
+  REALISTIC_BASE_MODEL_URL,
   type AvatarConfig,
   type AvatarPhotoSource,
   createDefaultAvatarConfig,
@@ -70,7 +70,7 @@ export default function AvatarSetup({ userId, currentConfig, onComplete }: Avata
   const previewConfig = useMemo(
     () => ({
       ...config,
-      avatarUrl: config.avatarUrl ?? DEMO_AVATAR_URL,
+      avatarUrl: config.avatarUrl ?? REALISTIC_BASE_MODEL_URL,
     }),
     [config]
   );
@@ -147,6 +147,10 @@ export default function AvatarSetup({ userId, currentConfig, onComplete }: Avata
         source: result.provider ? 'external_provider' : 'photo',
         provider: result.provider,
         modelFormat: result.modelFormat,
+        customization: {
+          ...config.customization,
+          traits: result.traits ?? config.customization.traits
+        },
         updatedAt: new Date().toISOString(),
       };
 
@@ -193,16 +197,14 @@ export default function AvatarSetup({ userId, currentConfig, onComplete }: Avata
         </View>
 
         <View style={styles.previewCard}>
-          <AvatarPreview
+          <Avatar3DViewer
             avatarUrl={previewConfig.avatarUrl}
             pose={previewConfig.selectedPose}
             teamColor={previewConfig.teamColor}
             customization={previewConfig.customization}
-            avatarName={previewConfig.avatarName}
-            width={260}
-            height={330}
+            width={320}
+            height={400}
             autoRotate
-            showControls
           />
           {isGenerating ? (
             <View style={styles.generatingOverlay}>

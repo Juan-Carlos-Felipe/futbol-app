@@ -1,3 +1,4 @@
+// ✅ REDISEÑADO con theme.ts
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,8 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
-import AvatarPreview from '@/components/avatar/AvatarPreview';
+import Avatar3DViewer from '@/components/avatar/Avatar3DViewer';
 import AvatarSetup from '@/components/avatar/AvatarSetup';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import EloDisplay from '@/components/ui/EloDisplay';
@@ -31,6 +31,7 @@ import {
 import { getFifaRating } from '@/lib/elo';
 import { colors, font, radii, shadows, spacing } from '@/lib/theme';
 import { SectionTitle, SportCard, StatPill } from '@/components/ui/SportPrimitives';
+import FifaCard from '@/components/ui/FifaCard';
 
 const SKILLS = [
   { key: 'attack', label: 'Ataque', icon: 'ATQ' },
@@ -115,30 +116,22 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.avatarHero}>
         <View style={styles.avatarStage}>
-          {avatarConfig?.avatarUrl ? (
-            <AvatarPreview
-              avatarUrl={avatarConfig.avatarUrl}
-              pose={avatarConfig.selectedPose}
-              teamColor={avatarConfig.teamColor}
-              customization={avatarConfig.customization}
-              avatarName={avatarConfig.avatarName}
-              width={160}
-              height={240}
-              autoRotate
-              showControls={false}
+          {avatarConfig ? (
+            <FifaCard
+              config={avatarConfig}
+              rating={fifaRating}
+              stats={{
+                pac: skills.speed,
+                sho: skills.attack,
+                pas: Math.round((skills.attack + skills.defense) / 2),
+                dri: skills.speed - 5,
+                def: skills.defense,
+                phy: skills.stamina
+              }}
             />
           ) : (
-            <AvatarPlaceholder
-              size="lg"
-              teamColor={avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR}
-              customization={avatarConfig?.customization}
-              label={avatarConfig?.avatarName}
-            />
+            <ActivityIndicator color={colors.accent} />
           )}
-          <View style={styles.ratingOverlay}>
-            <AnimatedNumber value={fifaRating} style={styles.ratingOverlayValue} />
-            <Text style={styles.ratingOverlayLabel}>RAT</Text>
-          </View>
         </View>
         {userId ? (
           <TouchableOpacity style={styles.editAvatarButton} onPress={() => setShowAvatarSetup(true)}>
@@ -316,19 +309,14 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center' },
   avatarHero: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 28,
-    borderWidth: 1,
+    backgroundColor: 'transparent',
     marginBottom: 24,
-    overflow: 'hidden',
     paddingTop: 12,
-    ...shadows.card,
   },
   avatarStage: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 250,
+    minHeight: 340,
     width: '100%',
   },
   ratingOverlay: {
