@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
+import Avatar3DViewer from '@/components/avatar/Avatar3DViewer';
 import {
   DEFAULT_AVATAR_CUSTOMIZATION,
   type AvatarCustomization,
@@ -30,6 +30,7 @@ type AvatarViewerProps = {
 };
 
 export default function AvatarViewer({
+  avatarUrl,
   pose,
   teamColor,
   width = 200,
@@ -136,10 +137,14 @@ export default function AvatarViewer({
           },
         ]}
       >
-        <AvatarPlaceholder
-          size={height > 220 ? 'lg' : 'md'}
+        <Avatar3DViewer
+          avatarUrl={avatarUrl}
+          pose={pose}
           teamColor={teamColor}
           customization={avatar}
+          width={width}
+          height={height}
+          autoRotate={false}
         />
       </Animated.View>
 

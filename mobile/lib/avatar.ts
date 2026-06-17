@@ -9,6 +9,16 @@ export type AvatarAccessory = 'none' | 'headband' | 'wristbands' | 'captain_band
 export type AvatarExpression = 'focused' | 'smile' | 'serious' | 'celebration';
 export type AvatarGenerationSource = 'manual' | 'photo' | 'external_provider';
 
+export interface FacialTraits {
+  faceShape: number; // 0 to 1
+  jawShape: number;
+  noseShape: number;
+  lipShape: number;
+  eyeDistance: number;
+  eyeColor: string;
+  eyebrowsType: string;
+}
+
 export interface AvatarCustomization {
   skinTone: AvatarSkinTone;
   hairStyle: AvatarHairStyle;
@@ -16,6 +26,7 @@ export interface AvatarCustomization {
   outfit: AvatarOutfit;
   accessory: AvatarAccessory;
   expression: AvatarExpression;
+  traits?: FacialTraits;
 }
 
 export interface AvatarPhotoSource {
@@ -42,6 +53,25 @@ export const DEFAULT_AVATAR_POSE: AvatarPose = 'idle';
 export const DEFAULT_TEAM_COLOR = '#D2B5FF';
 export const DEFAULT_HAIR_COLOR = '#221a16';
 export const DEMO_AVATAR_URL = 'https://models.readyplayer.me/638df693d72bffc6fa17943c.glb';
+export const REALISTIC_BASE_MODEL_URL = 'https://models.readyplayer.me/651f33f67f1e7a46f6f1c4a0.glb';
+
+export const FUT_LIGHTING = {
+  ambientIntensity: 0.6,
+  directionalColor: '#fff5e6',
+  directionalIntensity: 1.8,
+  rimColor: '#ffd700',
+  rimIntensity: 1.2,
+};
+
+export const DEFAULT_FACIAL_TRAITS: FacialTraits = {
+  faceShape: 0.5,
+  jawShape: 0.5,
+  noseShape: 0.5,
+  lipShape: 0.5,
+  eyeDistance: 0.5,
+  eyeColor: '#4d342c',
+  eyebrowsType: 'natural',
+};
 
 export const DEFAULT_AVATAR_CUSTOMIZATION: AvatarCustomization = {
   skinTone: 'tan',
@@ -50,6 +80,7 @@ export const DEFAULT_AVATAR_CUSTOMIZATION: AvatarCustomization = {
   outfit: 'home',
   accessory: 'none',
   expression: 'focused',
+  traits: DEFAULT_FACIAL_TRAITS,
 };
 
 export const SKIN_TONES: Record<AvatarSkinTone, { label: string; color: string }> = {

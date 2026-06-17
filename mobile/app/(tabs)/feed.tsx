@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
+import Avatar3DViewer from '@/components/avatar/Avatar3DViewer';
 import AvatarPreview from '@/components/avatar/AvatarPreview';
 import AvatarSetup from '@/components/avatar/AvatarSetup';
 import { useMyActivityFeed, type FeedEvent } from '@/hooks/useActivityFeed';
@@ -177,7 +177,13 @@ function AvatarHero({
           />
         ) : (
           <>
-            <AvatarPlaceholder size="md" teamColor={DEFAULT_TEAM_COLOR} />
+            <Avatar3DViewer
+              width={80}
+              height={80}
+              pose="idle"
+              teamColor={DEFAULT_TEAM_COLOR}
+              autoRotate={false}
+            />
             {userId ? (
               <TouchableOpacity style={styles.createAvatarButton} onPress={onCreateAvatar}>
                 <Text style={styles.createAvatarText}>Crear avatar -&gt;</Text>

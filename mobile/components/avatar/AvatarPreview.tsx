@@ -1,6 +1,5 @@
-import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
 import AvatarViewer from '@/components/avatar/AvatarViewer';
-import type { AvatarCustomization, AvatarPose } from '@/lib/avatar';
+import { type AvatarCustomization, type AvatarPose, REALISTIC_BASE_MODEL_URL } from '@/lib/avatar';
 
 type AvatarPreviewProps = {
   avatarUrl: string | null;
@@ -25,21 +24,12 @@ export default function AvatarPreview({
   showControls,
   avatarName,
 }: AvatarPreviewProps) {
-  if (!avatarUrl) {
-    return (
-      <AvatarPlaceholder
-        size={height > 220 ? 'lg' : 'md'}
-        teamColor={teamColor}
-        customization={customization}
-        label={avatarName}
-      />
-    );
-  }
+  const url = avatarUrl || REALISTIC_BASE_MODEL_URL;
 
   return (
     <AvatarViewer
-      key={`${avatarUrl}-${pose}-${teamColor}-${JSON.stringify(customization ?? {})}`}
-      avatarUrl={avatarUrl}
+      key={`${url}-${pose}-${teamColor}-${JSON.stringify(customization ?? {})}`}
+      avatarUrl={url}
       pose={pose}
       teamColor={teamColor}
       width={width}
