@@ -3,7 +3,6 @@ import type * as React from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,11 +14,10 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import AvatarPreview from '@/components/avatar/AvatarPreview';
-import AvatarSetup from '@/components/avatar/AvatarSetup';
+import PlayerCardAvatar from '@/components/avatar/PlayerCardAvatar';
 import { useMyActivityFeed, type FeedEvent } from '@/hooks/useActivityFeed';
 import { useAuth } from '@/hooks/useAuth';
-import { DEFAULT_TEAM_COLOR, loadAvatarConfig, type AvatarConfig } from '@/lib/avatar';
+import { loadAvatarConfig, type PlayerAvatarConfig } from '@/lib/avatar';
 import { colors, font, gradients, radii, shadows, spacing } from '@/lib/theme';
 import { SectionTitle, SportCard, StatPill } from '@/components/ui/SportPrimitives';
 
@@ -28,8 +26,7 @@ export default function FeedScreen() {
   const { userId } = useAuth();
   const { data: events, isLoading, refetch, isRefetching } = useMyActivityFeed();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(null);
-  const [showAvatarSetup, setShowAvatarSetup] = useState(false);
+  const [avatarConfig, setAvatarConfig] = useState<PlayerAvatarConfig | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -74,7 +71,7 @@ export default function FeedScreen() {
       <AvatarHero
         avatarConfig={avatarConfig}
         userId={userId}
-        onCreateAvatar={() => setShowAvatarSetup(true)}
+        onCreateAvatar={() => router.push('/player-builder')}
       />
 
       {events?.length ? (
@@ -125,17 +122,6 @@ export default function FeedScreen() {
           </Text>
         </View>
       )}
-
-      <AvatarSetupModal
-        visible={showAvatarSetup}
-        userId={userId}
-        avatarConfig={avatarConfig}
-        onClose={() => setShowAvatarSetup(false)}
-        onComplete={(config) => {
-          setAvatarConfig(config);
-          setShowAvatarSetup(false);
-        }}
-      />
     </View>
   );
 }
@@ -145,7 +131,7 @@ function AvatarHero({
   userId,
   onCreateAvatar,
 }: {
-  avatarConfig: AvatarConfig | null;
+  avatarConfig: PlayerAvatarConfig | null;
   userId: string | null;
   onCreateAvatar: () => void;
 }) {
@@ -163,47 +149,24 @@ function AvatarHero({
         <Text style={styles.heroSubtitle}>Actividad, partidos y rendimiento en tiempo real.</Text>
       </View>
       <View style={styles.heroAvatar}>
-        <AvatarPreview
-          avatarUrl={avatarConfig?.avatarUrl ?? null}
-          pose={avatarConfig?.selectedPose ?? 'idle'}
-          teamColor={avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR}
-          customization={avatarConfig?.customization}
-          faceAdjustment={avatarConfig?.faceAdjustment}
-          generatedFeatures={avatarConfig?.generatedFeatures}
-          avatarName={avatarConfig?.avatarName}
-          width={140}
-          height={200}
-          showControls={false}
-        />
-        {userId && !avatarConfig?.avatarUrl ? (
+        {avatarConfig && (
+          <PlayerCardAvatar
+            config={avatarConfig}
+            width={140}
+            height={200}
+          />
+        )}
+        {userId && !avatarConfig ? (
           <TouchableOpacity style={styles.createAvatarButton} onPress={onCreateAvatar}>
-            <Text style={styles.createAvatarText}>Crear avatar</Text>
+            <Text style={styles.createAvatarText}>Crear jugador</Text>
           </TouchableOpacity>
-        ) : null}
+        ) : (
+          <TouchableOpacity style={styles.createAvatarButton} onPress={onCreateAvatar}>
+            <Text style={styles.createAvatarText}>Editar jugador</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </LinearGradient>
-  );
-}
-
-function AvatarSetupModal({
-  visible,
-  userId,
-  avatarConfig,
-  onClose,
-  onComplete,
-}: {
-  visible: boolean;
-  userId: string | null;
-  avatarConfig: AvatarConfig | null;
-  onClose: () => void;
-  onComplete: (config: AvatarConfig) => void;
-}) {
-  if (!userId) return null;
-
-  return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <AvatarSetup userId={userId} currentConfig={avatarConfig} onComplete={onComplete} />
-    </Modal>
   );
 }
 

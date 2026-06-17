@@ -1,45 +1,36 @@
-import ProfessionalAvatarPreview from '@/components/avatar/ProfessionalAvatarPreview';
-import type { AvatarCustomization, AvatarFaceAdjustment, AvatarPose, GeneratedAvatarFeatures } from '@/lib/avatar';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { PlayerAvatarConfig } from '@/types/avatar';
+import PlayerAvatarViewer from './PlayerAvatarViewer';
 
-type AvatarPreviewProps = {
-  avatarUrl: string | null;
-  pose: AvatarPose;
-  teamColor: string;
+interface AvatarPreviewProps {
+  config: PlayerAvatarConfig;
   width?: number;
   height?: number;
   autoRotate?: boolean;
-  customization?: Partial<AvatarCustomization>;
-  faceAdjustment?: AvatarFaceAdjustment;
-  generatedFeatures?: GeneratedAvatarFeatures | null;
-  showControls?: boolean;
-  avatarName?: string;
-};
+}
 
 export default function AvatarPreview({
-  avatarUrl,
-  pose,
-  teamColor,
-  width = 170,
-  height = 240,
-  autoRotate,
-  customization,
-  faceAdjustment,
-  generatedFeatures,
-  showControls,
-  avatarName,
+  config,
+  width,
+  height,
+  autoRotate
 }: AvatarPreviewProps) {
   return (
-    <ProfessionalAvatarPreview
-      key={`${avatarUrl}-${pose}-${teamColor}-${JSON.stringify(customization ?? {})}`}
-      avatarUrl={avatarUrl}
-      pose={pose}
-      teamColor={teamColor}
-      width={width}
-      height={height}
-      faceAdjustment={faceAdjustment}
-      generatedFeatures={generatedFeatures}
-      avatarName={avatarName}
-      compact={!showControls && !autoRotate}
-    />
+    <View style={styles.container}>
+      <PlayerAvatarViewer
+        config={config}
+        width={width}
+        height={height}
+        autoRotate={autoRotate}
+      />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  }
+});

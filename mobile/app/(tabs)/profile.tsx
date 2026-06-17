@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,8 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import AvatarPreview from '@/components/avatar/AvatarPreview';
-import AvatarSetup from '@/components/avatar/AvatarSetup';
+import PlayerCardAvatar from '@/components/avatar/PlayerCardAvatar';
 import BalonesWidget from '@/components/store/BalonesWidget';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import EloDisplay from '@/components/ui/EloDisplay';
@@ -27,13 +25,12 @@ import { useTeamStats } from '@/hooks/useTeamStats';
 import { useMyTeams } from '@/hooks/useTeams';
 import { signOut } from '@/lib/auth';
 import {
-  DEFAULT_TEAM_COLOR,
   loadAvatarConfig,
-  type AvatarConfig,
+  type PlayerAvatarConfig,
 } from '@/lib/avatar';
 import { getFifaRating } from '@/lib/elo';
 import { colors, font, radii, shadows, spacing } from '@/lib/theme';
-import { SectionTitle, SportCard, StatPill } from '@/components/ui/SportPrimitives';
+import { SectionTitle, SportCard } from '@/components/ui/SportPrimitives';
 
 const SKILLS = [
   { key: 'attack', label: 'Ataque', icon: 'ATQ' },
@@ -97,8 +94,7 @@ export default function ProfileScreen() {
   const { form } = useTeamRecentForm(activeTeamId);
   const [displayName, setDisplayName] = useState('');
   const [editing, setEditing] = useState(false);
-  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(null);
-  const [showAvatarSetup, setShowAvatarSetup] = useState(false);
+  const [avatarConfig, setAvatarConfig] = useState<PlayerAvatarConfig | null>(null);
 
   const playerWinRate =
     playerStats && playerStats.matches_played > 0
@@ -109,12 +105,6 @@ export default function ProfileScreen() {
     : 0;
   const playerElo = playerStats?.elo ?? 1000;
   const fifaRating = getFifaRating(playerElo);
-  const equippedColor =
-    inventory.find((item) => item.equipped && item.store_items?.type === 'jersey_color')
-      ?.store_items?.data?.color ?? avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR;
-  const equippedPose =
-    inventory.find((item) => item.equipped && item.store_items?.type === 'pose')?.store_items?.data
-      ?.pose ?? avatarConfig?.selectedPose ?? 'jogging';
 
   useEffect(() => {
     let mounted = true;
@@ -158,8 +148,6 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <PlayerStickerCard
         avatarConfig={avatarConfig}
-        avatarUrl={avatarConfig?.avatarUrl ?? null}
-        avatarName={avatarConfig?.avatarName}
         displayName={profile?.display_name ?? 'Jugador'}
         email={profile?.email}
         editing={editing}
@@ -172,8 +160,6 @@ export default function ProfileScreen() {
         onSaveProfile={saveProfile}
         fifaRating={fifaRating}
         playerElo={playerElo}
-        pose={equippedPose}
-        teamColor={equippedColor}
         skills={playerSkills}
         playerStats={{
           matches: playerStats?.matches_played ?? 0,
@@ -197,9 +183,9 @@ export default function ProfileScreen() {
         }
         avatarButton={
           userId ? (
-            <TouchableOpacity style={styles.editAvatarButton} onPress={() => setShowAvatarSetup(true)}>
+            <TouchableOpacity style={styles.editAvatarButton} onPress={() => router.push('/player-builder')}>
               <Text style={styles.editAvatarText}>
-                {avatarConfig?.avatarUrl ? 'Editar avatar' : 'Crear avatar'}
+                Personalizar jugador
               </Text>
             </TouchableOpacity>
           ) : null
@@ -243,31 +229,12 @@ export default function ProfileScreen() {
       <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
         <Text style={styles.logoutText}>Cerrar sesion</Text>
       </TouchableOpacity>
-
-      {userId ? (
-        <Modal
-          visible={showAvatarSetup}
-          animationType="slide"
-          onRequestClose={() => setShowAvatarSetup(false)}
-        >
-          <AvatarSetup
-            userId={userId}
-            currentConfig={avatarConfig}
-            onComplete={(config) => {
-              setAvatarConfig(config);
-              setShowAvatarSetup(false);
-            }}
-          />
-        </Modal>
-      ) : null}
     </ScrollView>
   );
 }
 
 function PlayerStickerCard({
   avatarConfig,
-  avatarUrl,
-  avatarName,
   displayName,
   email,
   editing,
@@ -277,16 +244,12 @@ function PlayerStickerCard({
   onSaveProfile,
   fifaRating,
   playerElo,
-  pose,
-  teamColor,
   skills,
   playerStats,
   inventorySlot,
   avatarButton,
 }: {
-  avatarConfig: AvatarConfig | null;
-  avatarUrl: string | null;
-  avatarName?: string;
+  avatarConfig: PlayerAvatarConfig | null;
   displayName: string;
   email?: string;
   editing: boolean;
@@ -296,8 +259,6 @@ function PlayerStickerCard({
   onSaveProfile: () => void;
   fifaRating: number;
   playerElo: number;
-  pose: AvatarConfig['selectedPose'];
-  teamColor: string;
   skills: PlayerSkill[];
   playerStats: { matches: number; wins: number; goals: number; assists: number; winRate: number };
   inventorySlot: ReactNode;
@@ -311,7 +272,7 @@ function PlayerStickerCard({
       style={styles.stickerCard}
     >
       <View style={styles.stickerPattern} />
-      <View style={[styles.stickerAccentBlock, { backgroundColor: teamColor }]} />
+      <View style={[styles.stickerAccentBlock, { backgroundColor: colors.accent }]} />
       <Text style={styles.stickerYear}>26</Text>
 
       {inventorySlot}
@@ -327,18 +288,13 @@ function PlayerStickerCard({
       </View>
 
       <View style={styles.stickerAvatarWrap}>
-        <AvatarPreview
-          avatarUrl={avatarUrl}
-          pose={pose}
-          teamColor={teamColor}
-          faceAdjustment={avatarConfig?.faceAdjustment}
-          generatedFeatures={avatarConfig?.generatedFeatures}
-          avatarName={avatarName}
-          width={250}
-          height={330}
-          autoRotate
-          showControls={false}
-        />
+        {avatarConfig && (
+          <PlayerCardAvatar
+            config={avatarConfig}
+            width={250}
+            height={330}
+          />
+        )}
       </View>
 
       <View style={styles.identityPanel}>
@@ -545,6 +501,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: -34,
     zIndex: 2,
+    minHeight: 330,
   },
   identityPanel: {
     backgroundColor: 'rgba(16,17,29,0.74)',
@@ -699,24 +656,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 6,
   },
-  avatarHero: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 28,
-    borderWidth: 1,
-    marginBottom: 24,
-    overflow: 'hidden',
-    paddingTop: 12,
-    ...shadows.card,
-  },
-  heroTopRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    width: '100%',
-  },
   inventoryButton: {
     backgroundColor: '#D2B5FF22',
     borderRadius: 999,
@@ -729,55 +668,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
   },
-  avatarStage: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 250,
-    width: '100%',
-  },
-  ratingOverlay: {
-    alignItems: 'center',
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    bottom: 18,
-    left: 24,
-    minWidth: 68,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    position: 'absolute',
-  },
-  ratingOverlayValue: { color: colors.background, fontFamily: font.extraBold, fontSize: 28, fontWeight: '900' },
-  ratingOverlayLabel: { color: colors.background, fontFamily: font.extraBold, fontSize: 10, fontWeight: '900' },
   editAvatarButton: {
     backgroundColor: '#D2B5FF22',
     borderRadius: 999,
-    marginBottom: 16,
+    marginTop: 16,
     paddingHorizontal: 16,
     paddingVertical: 9,
+    alignItems: 'center',
   },
   editAvatarText: { color: colors.accent, fontFamily: font.bold, fontSize: 13, fontWeight: '900' },
-  section: { marginBottom: 28 },
-  row: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  name: { color: colors.white, fontFamily: font.extraBold, fontSize: 26, fontWeight: '800' },
-  editHint: { color: colors.accent, fontFamily: font.medium, fontSize: 12, marginTop: 2 },
-  email: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 14, marginTop: 4 },
-  input: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    color: '#fff',
-    fontSize: 16,
-    padding: 12,
-  },
-  saveBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.accent,
-    borderRadius: 10,
-    minWidth: 44,
-    padding: 12,
-  },
-  saveBtnText: { color: colors.background, fontFamily: font.bold, fontSize: 14, fontWeight: '900' },
   sectionTitle: {
     color: colors.textMuted,
     fontFamily: font.semiBold,
@@ -786,36 +685,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textTransform: 'uppercase',
   },
-  statsCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    marginBottom: 28,
-    padding: 18,
-    ...shadows.card,
-  },
-  statsEyebrow: {
-    color: colors.accent,
-    fontFamily: font.extraBold,
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 2,
-    marginBottom: 12,
-  },
-  ratingRow: { alignItems: 'center', flexDirection: 'row', gap: 14, marginBottom: 14 },
-  fifaRatingCard: {
-    alignItems: 'center',
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    minWidth: 72,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  fifaRating: { color: colors.background, fontFamily: font.extraBold, fontSize: 34, fontWeight: '900' },
-  fifaRatingLabel: { color: colors.background, fontFamily: font.extraBold, fontSize: 11, fontWeight: '900', marginTop: -2 },
-  eloDisplayWrap: { flex: 1 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   statTile: { alignItems: 'center', paddingVertical: 10, width: '33.333%' },
   statTileValue: { fontSize: 28, fontWeight: '900' },
   statTileLabel: { color: colors.textSubtle, fontFamily: font.semiBold, fontSize: 11, fontWeight: '800', marginTop: 3 },
@@ -857,18 +726,6 @@ const styles = StyleSheet.create({
   },
   formDotText: { fontSize: 13, fontWeight: '900' },
   formHint: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 12, marginTop: 10 },
-  skillRow: { alignItems: 'center', flexDirection: 'row', gap: 10, marginBottom: 12 },
-  skillLabel: { color: colors.white, fontFamily: font.medium, fontSize: 14, width: 118 },
-  skillBarBg: {
-    backgroundColor: colors.surfaceSoft,
-    borderRadius: 3,
-    flex: 1,
-    height: 6,
-    overflow: 'hidden',
-  },
-  skillBarFill: { backgroundColor: colors.accent, borderRadius: 3, height: '100%' },
-  skillValue: { color: colors.textSubtle, fontFamily: font.medium, fontSize: 12, textAlign: 'right', width: 30 },
-  skillNote: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 11, fontStyle: 'italic', marginTop: 8 },
   logoutBtn: {
     alignItems: 'center',
     borderColor: colors.danger,
