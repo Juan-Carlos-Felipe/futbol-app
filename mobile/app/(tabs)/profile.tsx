@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -10,9 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import AvatarPreview from '@/components/avatar/AvatarPreview';
 import AvatarSetup from '@/components/avatar/AvatarSetup';
+import BalonesWidget from '@/components/store/BalonesWidget';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import EloDisplay from '@/components/ui/EloDisplay';
 import EloHistoryList from '@/components/ui/EloHistoryList';
@@ -20,6 +22,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlayerStats, useRanking, useTeamRecentForm } from '@/hooks/useMatchmaking';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
+import { useUserInventory } from '@/hooks/useStore';
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { useMyTeams } from '@/hooks/useTeams';
 import { signOut } from '@/lib/auth';
@@ -49,10 +52,43 @@ const DEFAULT_SKILLS: SkillsMap = {
   stamina: 50,
 };
 
+type PlayerSkill = {
+  key: string;
+  label: string;
+  short: string;
+  value: number;
+  color: string;
+};
+
+function buildPlayerSkills(skills: SkillsMap): PlayerSkill[] {
+  return [
+    { key: 'pace', label: 'Ritmo', short: 'PAC', value: skills.speed, color: '#6f8cff' },
+    { key: 'shooting', label: 'Tiro', short: 'SHO', value: skills.attack, color: '#f4b740' },
+    {
+      key: 'passing',
+      label: 'Pase',
+      short: 'PAS',
+      value: Math.round((skills.attack + skills.stamina) / 2),
+      color: '#D2B5FF',
+    },
+    {
+      key: 'dribbling',
+      label: 'Regate',
+      short: 'DRI',
+      value: Math.round((skills.speed + skills.attack) / 2),
+      color: '#33d69f',
+    },
+    { key: 'defending', label: 'Defensa', short: 'DEF', value: skills.defense, color: '#60a5fa' },
+    { key: 'physical', label: 'Físico', short: 'PHY', value: skills.stamina, color: '#ff6b7a' },
+  ];
+}
+
 export default function ProfileScreen() {
+  const router = useRouter();
   const { userId } = useAuth();
   const { data: profile, isLoading } = useProfile();
   const { data: teams } = useMyTeams();
+  const { inventory } = useUserInventory(userId);
   const updateProfile = useUpdateProfile();
   const activeTeamId = useMemo(() => teams?.[0]?.team_id ?? null, [teams]);
   const { stats: playerStats } = usePlayerStats(userId);
@@ -73,6 +109,12 @@ export default function ProfileScreen() {
     : 0;
   const playerElo = playerStats?.elo ?? 1000;
   const fifaRating = getFifaRating(playerElo);
+  const equippedColor =
+    inventory.find((item) => item.equipped && item.store_items?.type === 'jersey_color')
+      ?.store_items?.data?.color ?? avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR;
+  const equippedPose =
+    inventory.find((item) => item.equipped && item.store_items?.type === 'pose')?.store_items?.data
+      ?.pose ?? avatarConfig?.selectedPose ?? 'jogging';
 
   useEffect(() => {
     let mounted = true;
@@ -100,6 +142,7 @@ export default function ProfileScreen() {
   }
 
   const skills = (profile?.skills as SkillsMap | undefined) ?? DEFAULT_SKILLS;
+  const playerSkills = buildPlayerSkills(skills);
 
   async function saveProfile() {
     if (!displayName.trim()) return;
@@ -113,93 +156,55 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.avatarHero}>
-        <View style={styles.avatarStage}>
-          {avatarConfig?.avatarUrl ? (
-            <AvatarPreview
-              avatarUrl={avatarConfig.avatarUrl}
-              pose={avatarConfig.selectedPose}
-              teamColor={avatarConfig.teamColor}
-              customization={avatarConfig.customization}
-              avatarName={avatarConfig.avatarName}
-              width={160}
-              height={240}
-              autoRotate
-              showControls={false}
-            />
-          ) : (
-            <AvatarPlaceholder
-              size="lg"
-              teamColor={avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR}
-              customization={avatarConfig?.customization}
-              label={avatarConfig?.avatarName}
-            />
-          )}
-          <View style={styles.ratingOverlay}>
-            <AnimatedNumber value={fifaRating} style={styles.ratingOverlayValue} />
-            <Text style={styles.ratingOverlayLabel}>RAT</Text>
-          </View>
-        </View>
-        {userId ? (
-          <TouchableOpacity style={styles.editAvatarButton} onPress={() => setShowAvatarSetup(true)}>
-            <Text style={styles.editAvatarText}>Editar avatar</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      <View style={styles.section}>
-        {editing ? (
-          <View style={styles.row}>
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Nombre de jugador"
-              placeholderTextColor="#666"
-              autoFocus
-            />
-            <TouchableOpacity style={styles.saveBtn} onPress={saveProfile}>
-              <Text style={styles.saveBtnText}>OK</Text>
+      <PlayerStickerCard
+        avatarConfig={avatarConfig}
+        avatarUrl={avatarConfig?.avatarUrl ?? null}
+        avatarName={avatarConfig?.avatarName}
+        displayName={profile?.display_name ?? 'Jugador'}
+        email={profile?.email}
+        editing={editing}
+        displayNameDraft={displayName}
+        onChangeDisplayName={setDisplayName}
+        onStartEditing={() => {
+          setDisplayName(profile?.display_name ?? '');
+          setEditing(true);
+        }}
+        onSaveProfile={saveProfile}
+        fifaRating={fifaRating}
+        playerElo={playerElo}
+        pose={equippedPose}
+        teamColor={equippedColor}
+        skills={playerSkills}
+        playerStats={{
+          matches: playerStats?.matches_played ?? 0,
+          wins: playerStats?.wins ?? 0,
+          goals: playerStats?.goals ?? 0,
+          assists: playerStats?.assists ?? 0,
+          winRate: playerWinRate,
+        }}
+        inventorySlot={
+          userId ? (
+            <View style={styles.stickerActions}>
+              <BalonesWidget userId={userId} />
+              <TouchableOpacity
+                style={styles.inventoryButton}
+                onPress={() => router.push('/tienda/inventario')}
+              >
+                <Text style={styles.inventoryButtonText}>Inventario</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        }
+        avatarButton={
+          userId ? (
+            <TouchableOpacity style={styles.editAvatarButton} onPress={() => setShowAvatarSetup(true)}>
+              <Text style={styles.editAvatarText}>
+                {avatarConfig?.avatarUrl ? 'Editar avatar' : 'Crear avatar'}
+              </Text>
             </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            onPress={() => {
-              setDisplayName(profile?.display_name ?? '');
-              setEditing(true);
-            }}
-          >
-            <Text style={styles.name}>{profile?.display_name ?? 'Jugador'}</Text>
-            <Text style={styles.editHint}>Toca para editar</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.email}>{profile?.email}</Text>
-      </View>
-
-      <View style={styles.statsCard}>
-        <Text style={styles.statsEyebrow}>PLAYER CARD</Text>
-        <View style={styles.ratingRow}>
-          <View style={styles.fifaRatingCard}>
-            <AnimatedNumber value={fifaRating} style={styles.fifaRating} />
-            <Text style={styles.fifaRatingLabel}>RAT</Text>
-          </View>
-          <View style={styles.eloDisplayWrap}>
-            <EloDisplay elo={playerElo} showLevel size="lg" />
-          </View>
-        </View>
-
-        <View style={styles.statsGrid}>
-          <StatTile label="Partidos" value={playerStats?.matches_played ?? 0} color="#d1d5db" />
-          <StatTile label="Victorias" value={playerStats?.wins ?? 0} color="#22c55e" />
-          <StatTile label="Derrotas" value={playerStats?.losses ?? 0} color="#ef4444" />
-          <StatTile label="Empates" value={playerStats?.draws ?? 0} color="#f59e0b" />
-          <StatTile label="Goles" value={playerStats?.goals ?? 0} color="#fbbf24" />
-          <StatTile label="Asist." value={playerStats?.assists ?? 0} color="#60a5fa" />
-        </View>
-
-        <ProgressRow label="% victorias como jugador" value={playerWinRate} />
-        <Text style={styles.eloHint}>Ranking personal basado en tus resultados</Text>
-      </View>
+          ) : null
+        }
+      />
 
       <SportCard style={styles.teamStatsCard}>
         <View style={styles.teamStatsHeader}>
@@ -235,22 +240,6 @@ export default function ProfileScreen() {
         </SportCard>
       ) : null}
 
-      <SportCard style={styles.section}>
-        <SectionTitle title="Habilidades" />
-        {SKILLS.map(({ key, label, icon }) => (
-          <View key={key} style={styles.skillRow}>
-            <Text style={styles.skillLabel}>
-              {icon} {label}
-            </Text>
-            <View style={styles.skillBarBg}>
-              <View style={[styles.skillBarFill, { width: `${skills[key]}%` }]} />
-            </View>
-            <Text style={styles.skillValue}>{skills[key]}</Text>
-          </View>
-        ))}
-        <Text style={styles.skillNote}>Las habilidades suben con la actividad en partidos</Text>
-      </SportCard>
-
       <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
         <Text style={styles.logoutText}>Cerrar sesion</Text>
       </TouchableOpacity>
@@ -272,6 +261,162 @@ export default function ProfileScreen() {
         </Modal>
       ) : null}
     </ScrollView>
+  );
+}
+
+function PlayerStickerCard({
+  avatarConfig,
+  avatarUrl,
+  avatarName,
+  displayName,
+  email,
+  editing,
+  displayNameDraft,
+  onChangeDisplayName,
+  onStartEditing,
+  onSaveProfile,
+  fifaRating,
+  playerElo,
+  pose,
+  teamColor,
+  skills,
+  playerStats,
+  inventorySlot,
+  avatarButton,
+}: {
+  avatarConfig: AvatarConfig | null;
+  avatarUrl: string | null;
+  avatarName?: string;
+  displayName: string;
+  email?: string;
+  editing: boolean;
+  displayNameDraft: string;
+  onChangeDisplayName: (value: string) => void;
+  onStartEditing: () => void;
+  onSaveProfile: () => void;
+  fifaRating: number;
+  playerElo: number;
+  pose: AvatarConfig['selectedPose'];
+  teamColor: string;
+  skills: PlayerSkill[];
+  playerStats: { matches: number; wins: number; goals: number; assists: number; winRate: number };
+  inventorySlot: ReactNode;
+  avatarButton: ReactNode;
+}) {
+  return (
+    <LinearGradient
+      colors={['#10111d', '#222132', '#31263a']}
+      start={{ x: 0.15, y: 0 }}
+      end={{ x: 0.85, y: 1 }}
+      style={styles.stickerCard}
+    >
+      <View style={styles.stickerPattern} />
+      <View style={[styles.stickerAccentBlock, { backgroundColor: teamColor }]} />
+      <Text style={styles.stickerYear}>26</Text>
+
+      {inventorySlot}
+
+      <View style={styles.stickerHeader}>
+        <View style={styles.ratingBadge}>
+          <AnimatedNumber value={fifaRating} style={styles.ratingBadgeValue} />
+          <Text style={styles.ratingBadgeLabel}>RAT</Text>
+        </View>
+        <View style={styles.eloPill}>
+          <EloDisplay elo={playerElo} showLevel size="sm" />
+        </View>
+      </View>
+
+      <View style={styles.stickerAvatarWrap}>
+        <AvatarPreview
+          avatarUrl={avatarUrl}
+          pose={pose}
+          teamColor={teamColor}
+          faceAdjustment={avatarConfig?.faceAdjustment}
+          generatedFeatures={avatarConfig?.generatedFeatures}
+          avatarName={avatarName}
+          width={250}
+          height={330}
+          autoRotate
+          showControls={false}
+        />
+      </View>
+
+      <View style={styles.identityPanel}>
+        {editing ? (
+          <View style={styles.nameEditRow}>
+            <TextInput
+              style={styles.nameInput}
+              value={displayNameDraft}
+              onChangeText={onChangeDisplayName}
+              placeholder="Nombre"
+              placeholderTextColor="#8b8799"
+              autoFocus
+            />
+            <TouchableOpacity style={styles.nameSaveButton} onPress={onSaveProfile}>
+              <Text style={styles.nameSaveText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={onStartEditing} activeOpacity={0.75}>
+            <Text style={styles.stickerName} numberOfLines={1}>
+              {displayName}
+            </Text>
+            <Text style={styles.stickerMeta} numberOfLines={1}>
+              {email ?? 'Jugador'} · {playerStats.winRate}% WR
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.quickStatsRow}>
+        <MiniStat label="PJ" value={playerStats.matches} />
+        <MiniStat label="G" value={playerStats.wins} tone="success" />
+        <MiniStat label="GL" value={playerStats.goals} tone="warning" />
+        <MiniStat label="AST" value={playerStats.assists} tone="blue" />
+      </View>
+
+      <View style={styles.skillsPanel}>
+        <View style={styles.skillsHeaderRow}>
+          <Text style={styles.skillsTitle}>Habilidades</Text>
+          <Text style={styles.skillsHint}>Perfil jugador</Text>
+        </View>
+        <View style={styles.skillsGrid}>
+          {skills.map((skill) => (
+            <SkillMeter key={skill.key} skill={skill} />
+          ))}
+        </View>
+      </View>
+
+      {avatarButton}
+    </LinearGradient>
+  );
+}
+
+function MiniStat({ label, value, tone }: { label: string; value: number; tone?: 'success' | 'warning' | 'blue' }) {
+  const color = tone === 'success' ? colors.success : tone === 'warning' ? colors.warning : tone === 'blue' ? '#60a5fa' : colors.text;
+
+  return (
+    <View style={styles.miniStat}>
+      <Text style={[styles.miniStatValue, { color }]}>{value.toLocaleString('es-CL')}</Text>
+      <Text style={styles.miniStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function SkillMeter({ skill }: { skill: PlayerSkill }) {
+  return (
+    <View style={styles.skillMeter}>
+      <View style={styles.skillMeterTop}>
+        <Text style={styles.skillShort}>{skill.short}</Text>
+        <Text style={styles.skillScore}>{skill.value}</Text>
+      </View>
+      <View style={styles.skillTrack}>
+        <View style={[styles.skillFill, { width: `${skill.value}%`, backgroundColor: skill.color }]} />
+      </View>
+      <Text style={styles.skillMeterLabel} numberOfLines={1}>
+        {skill.label}
+      </Text>
+    </View>
   );
 }
 
@@ -314,6 +459,246 @@ const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   content: { padding: spacing.lg, paddingBottom: 120 },
   centered: { alignItems: 'center', justifyContent: 'center' },
+  stickerCard: {
+    borderColor: 'rgba(210,181,255,0.16)',
+    borderRadius: 28,
+    borderWidth: 1,
+    marginBottom: 28,
+    overflow: 'hidden',
+    padding: 14,
+    ...shadows.card,
+  },
+  stickerPattern: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderBottomLeftRadius: 110,
+    height: 250,
+    position: 'absolute',
+    right: -44,
+    top: 30,
+    width: 190,
+  },
+  stickerAccentBlock: {
+    borderBottomRightRadius: 80,
+    borderTopLeftRadius: 80,
+    height: 210,
+    left: -70,
+    opacity: 0.34,
+    position: 'absolute',
+    top: 70,
+    width: 210,
+  },
+  stickerYear: {
+    color: 'rgba(255,255,255,0.08)',
+    fontFamily: font.extraBold,
+    fontSize: 120,
+    fontWeight: '900',
+    position: 'absolute',
+    right: 12,
+    top: 34,
+  },
+  stickerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    width: '100%',
+    zIndex: 3,
+  },
+  stickerHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    zIndex: 3,
+  },
+  ratingBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.warning,
+    borderRadius: 16,
+    minWidth: 76,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  ratingBadgeValue: {
+    color: colors.background,
+    fontFamily: font.extraBold,
+    fontSize: 34,
+    fontWeight: '900',
+  },
+  ratingBadgeLabel: {
+    color: colors.background,
+    fontFamily: font.extraBold,
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: -4,
+  },
+  eloPill: {
+    alignItems: 'flex-end',
+    backgroundColor: 'rgba(16,17,29,0.54)',
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    maxWidth: 178,
+    padding: 10,
+  },
+  stickerAvatarWrap: {
+    alignItems: 'center',
+    marginTop: -34,
+    zIndex: 2,
+  },
+  identityPanel: {
+    backgroundColor: 'rgba(16,17,29,0.74)',
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderRadius: 18,
+    borderWidth: 1,
+    marginTop: -12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    zIndex: 4,
+  },
+  stickerName: {
+    color: colors.text,
+    fontFamily: font.extraBold,
+    fontSize: 25,
+    fontWeight: '900',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  stickerMeta: {
+    color: colors.textSubtle,
+    fontFamily: font.medium,
+    fontSize: 12,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  nameEditRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  nameInput: {
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    color: colors.text,
+    flex: 1,
+    fontFamily: font.bold,
+    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  nameSaveButton: {
+    backgroundColor: colors.warning,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  nameSaveText: {
+    color: colors.background,
+    fontFamily: font.extraBold,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  quickStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    zIndex: 4,
+  },
+  miniStat: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderColor: colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    paddingVertical: 10,
+  },
+  miniStatValue: {
+    fontFamily: font.extraBold,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  miniStatLabel: {
+    color: colors.textSubtle,
+    fontFamily: font.bold,
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  skillsPanel: {
+    backgroundColor: 'rgba(16,17,29,0.58)',
+    borderColor: colors.border,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginTop: 12,
+    padding: 12,
+    zIndex: 4,
+  },
+  skillsHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  skillsTitle: {
+    color: colors.text,
+    fontFamily: font.extraBold,
+    fontSize: 14,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  skillsHint: {
+    color: colors.textSubtle,
+    fontFamily: font.medium,
+    fontSize: 11,
+  },
+  skillsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9,
+  },
+  skillMeter: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 14,
+    padding: 10,
+    width: '48%',
+  },
+  skillMeterTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  skillShort: {
+    color: colors.textMuted,
+    fontFamily: font.extraBold,
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  skillScore: {
+    color: colors.text,
+    fontFamily: font.extraBold,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  skillTrack: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderRadius: 999,
+    height: 6,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  skillFill: {
+    borderRadius: 999,
+    height: '100%',
+  },
+  skillMeterLabel: {
+    color: colors.textSubtle,
+    fontFamily: font.medium,
+    fontSize: 11,
+    marginTop: 6,
+  },
   avatarHero: {
     alignItems: 'center',
     backgroundColor: colors.surface,
@@ -324,6 +709,25 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingTop: 12,
     ...shadows.card,
+  },
+  heroTopRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    width: '100%',
+  },
+  inventoryButton: {
+    backgroundColor: '#D2B5FF22',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  inventoryButtonText: {
+    color: colors.accent,
+    fontFamily: font.bold,
+    fontSize: 12,
+    fontWeight: '900',
   },
   avatarStage: {
     alignItems: 'center',

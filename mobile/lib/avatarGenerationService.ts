@@ -1,8 +1,8 @@
 import {
-  DEMO_AVATAR_URL,
   type AvatarConfig,
   type AvatarCustomization,
   type AvatarPhotoSource,
+  type GeneratedAvatarFeatures,
 } from '@/lib/avatar';
 
 type AvatarGenerationRequest = {
@@ -11,12 +11,13 @@ type AvatarGenerationRequest = {
   avatarName: string;
   teamColor: string;
   customization: AvatarCustomization;
+  generatedFeatures?: GeneratedAvatarFeatures;
 };
 
 type AvatarGenerationResult = {
   avatarUrl: string;
   provider: string | null;
-  modelFormat: 'glb' | 'gltf';
+  modelFormat: 'glb' | 'gltf' | 'image';
   message: string;
 };
 
@@ -34,11 +35,11 @@ export const avatarGenerationService = {
 
     if (!apiUrl) {
       return {
-        avatarUrl: DEMO_AVATAR_URL,
-        provider: null,
-        modelFormat: 'glb',
+        avatarUrl: 'generated://local-football-avatar',
+        provider: 'local-face-analysis',
+        modelFormat: 'image',
         message:
-          'Modo demo activo: no hay proveedor de generacion configurado, se usara un avatar base editable.',
+          'Avatar profesional creado localmente desde rasgos de la selfie, sin usar APIs pagadas.',
       };
     }
 
@@ -79,10 +80,10 @@ export const avatarGenerationService = {
   buildManualConfig(config: AvatarConfig): AvatarConfig {
     return {
       ...config,
-      avatarUrl: config.avatarUrl ?? DEMO_AVATAR_URL,
-      source: 'manual',
-      provider: null,
-      modelFormat: 'glb',
+      avatarUrl: config.avatarUrl,
+      source: config.provider === 'local-face-analysis' || config.provider === 'local-photo-preview' ? 'photo' : 'manual',
+      provider: config.provider,
+      modelFormat: config.modelFormat,
       updatedAt: new Date().toISOString(),
     };
   },

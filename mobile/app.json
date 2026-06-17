@@ -17,7 +17,15 @@
         }
       ],
       "expo-location",
-      "react-native-map-link"
+      "react-native-map-link",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "ios": {
       "infoPlist": {

@@ -15,7 +15,6 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
 import AvatarPreview from '@/components/avatar/AvatarPreview';
 import AvatarSetup from '@/components/avatar/AvatarSetup';
 import { useMyActivityFeed, type FeedEvent } from '@/hooks/useActivityFeed';
@@ -164,27 +163,23 @@ function AvatarHero({
         <Text style={styles.heroSubtitle}>Actividad, partidos y rendimiento en tiempo real.</Text>
       </View>
       <View style={styles.heroAvatar}>
-        {avatarConfig?.avatarUrl ? (
-          <AvatarPreview
-            avatarUrl={avatarConfig.avatarUrl}
-            pose={avatarConfig.selectedPose}
-            teamColor={avatarConfig.teamColor}
-            customization={avatarConfig.customization}
-            avatarName={avatarConfig.avatarName}
-            width={140}
-            height={200}
-            showControls={false}
-          />
-        ) : (
-          <>
-            <AvatarPlaceholder size="md" teamColor={DEFAULT_TEAM_COLOR} />
-            {userId ? (
-              <TouchableOpacity style={styles.createAvatarButton} onPress={onCreateAvatar}>
-                <Text style={styles.createAvatarText}>Crear avatar -&gt;</Text>
-              </TouchableOpacity>
-            ) : null}
-          </>
-        )}
+        <AvatarPreview
+          avatarUrl={avatarConfig?.avatarUrl ?? null}
+          pose={avatarConfig?.selectedPose ?? 'idle'}
+          teamColor={avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR}
+          customization={avatarConfig?.customization}
+          faceAdjustment={avatarConfig?.faceAdjustment}
+          generatedFeatures={avatarConfig?.generatedFeatures}
+          avatarName={avatarConfig?.avatarName}
+          width={140}
+          height={200}
+          showControls={false}
+        />
+        {userId && !avatarConfig?.avatarUrl ? (
+          <TouchableOpacity style={styles.createAvatarButton} onPress={onCreateAvatar}>
+            <Text style={styles.createAvatarText}>Crear avatar</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </LinearGradient>
   );

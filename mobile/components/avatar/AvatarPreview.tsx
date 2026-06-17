@@ -1,6 +1,5 @@
-import AvatarPlaceholder from '@/components/avatar/AvatarPlaceholder';
-import AvatarViewer from '@/components/avatar/AvatarViewer';
-import type { AvatarCustomization, AvatarPose } from '@/lib/avatar';
+import ProfessionalAvatarPreview from '@/components/avatar/ProfessionalAvatarPreview';
+import type { AvatarCustomization, AvatarFaceAdjustment, AvatarPose, GeneratedAvatarFeatures } from '@/lib/avatar';
 
 type AvatarPreviewProps = {
   avatarUrl: string | null;
@@ -10,6 +9,8 @@ type AvatarPreviewProps = {
   height?: number;
   autoRotate?: boolean;
   customization?: Partial<AvatarCustomization>;
+  faceAdjustment?: AvatarFaceAdjustment;
+  generatedFeatures?: GeneratedAvatarFeatures | null;
   showControls?: boolean;
   avatarName?: string;
 };
@@ -22,32 +23,23 @@ export default function AvatarPreview({
   height = 240,
   autoRotate,
   customization,
+  faceAdjustment,
+  generatedFeatures,
   showControls,
   avatarName,
 }: AvatarPreviewProps) {
-  if (!avatarUrl) {
-    return (
-      <AvatarPlaceholder
-        size={height > 220 ? 'lg' : 'md'}
-        teamColor={teamColor}
-        customization={customization}
-        label={avatarName}
-      />
-    );
-  }
-
   return (
-    <AvatarViewer
+    <ProfessionalAvatarPreview
       key={`${avatarUrl}-${pose}-${teamColor}-${JSON.stringify(customization ?? {})}`}
       avatarUrl={avatarUrl}
       pose={pose}
       teamColor={teamColor}
       width={width}
       height={height}
-      autoRotate={autoRotate}
-      customization={customization}
-      showControls={showControls}
+      faceAdjustment={faceAdjustment}
+      generatedFeatures={generatedFeatures}
       avatarName={avatarName}
+      compact={!showControls && !autoRotate}
     />
   );
 }

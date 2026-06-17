@@ -25,6 +25,11 @@ const TAB_OPTIONS = {
     tabBarLabel: 'Rival',
     icon: 'shield-half-outline',
   },
+  tienda: {
+    title: 'Tienda',
+    tabBarLabel: 'Tienda',
+    icon: 'bag-outline',
+  },
   profile: {
     title: 'Perfil',
     tabBarLabel: 'Yo',

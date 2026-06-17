@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { getEloChange } from '@/lib/elo';
 import { supabase } from '@/lib/supabase';
@@ -121,6 +122,7 @@ export default function ConfirmedResultScreen() {
   const myTeamName = isHome ? result.home_team?.name : result.away_team?.name;
   const rivalTeamName = isHome ? result.away_team?.name : result.home_team?.name;
   const meta = OUTCOME_META[outcome];
+  const balonesEarned = BALONES_BY_OUTCOME[outcome];
 
   return (
     <View style={[styles.screen, { backgroundColor: meta.backgroundColor }]}>
@@ -135,6 +137,16 @@ export default function ConfirmedResultScreen() {
       <Text style={styles.teams}>
         {myTeamName ?? 'Mi equipo'} vs {rivalTeamName ?? 'Rival'}
       </Text>
+
+      <View style={styles.balonesCard}>
+        <Text style={styles.balonesTitle}>Ganaste</Text>
+        <AnimatedNumber
+          value={balonesEarned}
+          prefix="⚽ "
+          suffix=" Balones"
+          style={styles.balonesValue}
+        />
+      </View>
 
       {outcome === 'win' ? (
         <View style={styles.statsCard}>
@@ -244,6 +256,12 @@ const OUTCOME_META: Record<
   },
 };
 
+const BALONES_BY_OUTCOME: Record<Outcome, number> = {
+  win: 50,
+  draw: 20,
+  loss: 10,
+};
+
 const styles = StyleSheet.create({
   screen: {
     alignItems: 'center',
@@ -271,6 +289,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
+  balonesCard: {
+    alignItems: 'center',
+    backgroundColor: '#f59e0b',
+    borderRadius: 16,
+    marginTop: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    width: '100%',
+  },
+  balonesTitle: { color: '#78350f', fontSize: 12, fontWeight: '900' },
+  balonesValue: { color: '#78350f', fontSize: 26, fontWeight: '900', marginTop: 2 },
   statsCard: {
     backgroundColor: '#052e16',
     borderRadius: 16,

@@ -24,6 +24,32 @@ export interface AvatarPhotoSource {
   createdAt: string;
 }
 
+export interface AvatarFaceAdjustment {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}
+
+export interface GeneratedAvatarFeatures {
+  skinColor: string;
+  skinShadowColor: string;
+  hairColor: string;
+  faceWidth: number;
+  faceHeight: number;
+  jawWidth: number;
+  cheekWidth: number;
+  eyeSpacing: number;
+  eyeSize: number;
+  eyebrowTilt: number;
+  noseWidth: number;
+  noseLength: number;
+  mouthWidth: number;
+  mouthFullness: number;
+  hairVolume: number;
+  hairline: number;
+  confidence: number;
+}
+
 export interface AvatarConfig {
   userId: string;
   avatarUrl: string | null;
@@ -34,7 +60,10 @@ export interface AvatarConfig {
   source: AvatarGenerationSource;
   photo?: AvatarPhotoSource | null;
   provider?: string | null;
-  modelFormat?: 'glb' | 'gltf' | null;
+  modelFormat?: 'glb' | 'gltf' | 'image' | null;
+  faceAdjustment: AvatarFaceAdjustment;
+  generatedFeatures?: GeneratedAvatarFeatures | null;
+  avatarVersion?: number;
   updatedAt: string | null;
 }
 
@@ -50,6 +79,12 @@ export const DEFAULT_AVATAR_CUSTOMIZATION: AvatarCustomization = {
   outfit: 'home',
   accessory: 'none',
   expression: 'focused',
+};
+
+export const DEFAULT_FACE_ADJUSTMENT: AvatarFaceAdjustment = {
+  offsetX: 0,
+  offsetY: 0,
+  scale: 1,
 };
 
 export const SKIN_TONES: Record<AvatarSkinTone, { label: string; color: string }> = {
@@ -118,6 +153,26 @@ export const ANIMATION_URLS: Record<AvatarPose, string> = {
   warmup: 'https://models.readyplayer.me/animations/warmup.glb',
 };
 
+export function isReadyPlayerMeUrl(url: string | null | undefined) {
+  return Boolean(url && /^https:\/\/models\.readyplayer\.me\/.+\.(glb|gltf|png|jpg|jpeg)(\?.*)?$/i.test(url));
+}
+
+export function getReadyPlayerMePreviewUrl(url: string | null | undefined, size = 768) {
+  if (!url) return null;
+
+  if (!isReadyPlayerMeUrl(url)) return url;
+
+  const [path] = url.split('?');
+  const previewPath = path.replace(/\.(glb|gltf)$/i, '.png');
+  const params = new URLSearchParams({
+    size: String(size),
+    camera: 'portrait',
+    expression: 'serious',
+  });
+
+  return `${previewPath}?${params.toString()}`;
+}
+
 function storageKey(userId: string) {
   return `avatar_config_${userId}`;
 }
@@ -125,7 +180,7 @@ function storageKey(userId: string) {
 export function createDefaultAvatarConfig(userId: string): AvatarConfig {
   return {
     userId,
-    avatarUrl: DEMO_AVATAR_URL,
+    avatarUrl: null,
     avatarName: 'Mi Avatar',
     selectedPose: DEFAULT_AVATAR_POSE,
     teamColor: DEFAULT_TEAM_COLOR,
@@ -134,6 +189,9 @@ export function createDefaultAvatarConfig(userId: string): AvatarConfig {
     photo: null,
     provider: null,
     modelFormat: 'glb',
+    faceAdjustment: DEFAULT_FACE_ADJUSTMENT,
+    generatedFeatures: null,
+    avatarVersion: 1,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -150,7 +208,7 @@ export function normalizeAvatarConfig(
     ...base,
     ...config,
     userId,
-    avatarUrl: config.avatarUrl ?? base.avatarUrl,
+    avatarUrl: config.avatarUrl === DEMO_AVATAR_URL ? null : config.avatarUrl ?? base.avatarUrl,
     avatarName: config.avatarName?.trim() || base.avatarName,
     selectedPose: config.selectedPose ?? base.selectedPose,
     teamColor: config.teamColor ?? base.teamColor,
@@ -162,6 +220,12 @@ export function normalizeAvatarConfig(
     photo: config.photo ?? null,
     provider: config.provider ?? null,
     modelFormat: config.modelFormat ?? 'glb',
+    faceAdjustment: {
+      ...base.faceAdjustment,
+      ...(config.faceAdjustment ?? {}),
+    },
+    generatedFeatures: config.generatedFeatures ?? null,
+    avatarVersion: config.avatarVersion ?? base.avatarVersion,
     updatedAt: config.updatedAt ?? base.updatedAt,
   };
 }
@@ -172,14 +236,46 @@ export async function saveAvatarConfig(config: AvatarConfig) {
 
 export async function loadAvatarConfig(userId: string): Promise<AvatarConfig | null> {
   const stored = await AsyncStorage.getItem(storageKey(userId));
-  if (!stored) return null;
+  let localConfig: AvatarConfig | null = null;
 
-  try {
-    return normalizeAvatarConfig(JSON.parse(stored) as Partial<AvatarConfig>, userId);
-  } catch {
-    await AsyncStorage.removeItem(storageKey(userId));
-    return null;
+  if (stored) {
+    try {
+      localConfig = normalizeAvatarConfig(JSON.parse(stored) as Partial<AvatarConfig>, userId);
+    } catch {
+      await AsyncStorage.removeItem(storageKey(userId));
+    }
   }
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('avatar_3d_url, avatar_pose, avatar_team_color')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data?.avatar_3d_url || data.avatar_3d_url === DEMO_AVATAR_URL) return localConfig;
+
+  if (
+    (localConfig?.provider === 'local-photo-preview' || localConfig?.provider === 'local-face-analysis') &&
+    localConfig.avatarUrl
+  ) {
+    return localConfig;
+  }
+
+  const remoteConfig = normalizeAvatarConfig(
+    {
+      ...(localConfig ?? {}),
+      avatarUrl: data.avatar_3d_url,
+      selectedPose: data.avatar_pose as AvatarPose,
+      teamColor: data.avatar_team_color,
+      source: 'external_provider',
+      provider: 'remote',
+      modelFormat: 'glb',
+    },
+    userId
+  );
+
+  await saveAvatarConfig(remoteConfig);
+  return remoteConfig;
 }
 
 export async function saveAvatarUrl(userId: string, avatarUrl: string) {
@@ -193,11 +289,12 @@ export async function saveAvatarUrl(userId: string, avatarUrl: string) {
 
 export async function saveAvatarToProfile(config: AvatarConfig) {
   await saveAvatarConfig(config);
+  const isLocalPhotoPreview = config.modelFormat === 'image' || config.provider === 'local-photo-preview';
 
   const { error } = await supabase
     .from('users')
     .update({
-      avatar_3d_url: config.avatarUrl,
+      avatar_3d_url: isLocalPhotoPreview ? null : config.avatarUrl,
       avatar_pose: config.selectedPose,
       avatar_team_color: config.teamColor,
     })

@@ -1,12 +1,21 @@
 import { WebView } from 'react-native-webview';
 
-const RPM_SUBDOMAIN = 'futbolapp';
-
 type RPMWebViewProps = {
+  creatorUrl: string;
   onAvatarCreated: (url: string) => void;
 };
 
-export default function RPMWebView({ onAvatarCreated }: RPMWebViewProps) {
+export function getReadyPlayerMeCreatorUrl() {
+  const explicitUrl = process.env.EXPO_PUBLIC_READY_PLAYER_ME_CREATOR_URL?.trim();
+  if (explicitUrl?.startsWith('https://')) return explicitUrl;
+
+  const subdomain = process.env.EXPO_PUBLIC_READY_PLAYER_ME_SUBDOMAIN?.trim();
+  if (subdomain) return `https://${subdomain}.readyplayer.me/avatar?frameApi`;
+
+  return null;
+}
+
+export default function RPMWebView({ creatorUrl, onAvatarCreated }: RPMWebViewProps) {
   function handleMessage(event: { nativeEvent: { data: string } }) {
     try {
       const data = JSON.parse(event.nativeEvent.data) as {
@@ -29,7 +38,7 @@ export default function RPMWebView({ onAvatarCreated }: RPMWebViewProps) {
 
   return (
     <WebView
-      source={{ uri: `https://${RPM_SUBDOMAIN}.readyplayer.me/avatar?frameApi` }}
+      source={{ uri: creatorUrl }}
       style={{ flex: 1 }}
       onMessage={handleMessage}
       javaScriptEnabled
