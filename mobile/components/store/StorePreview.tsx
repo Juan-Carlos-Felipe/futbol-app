@@ -1,15 +1,21 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
-import { POSE_LABELS, type AvatarPose } from '@/lib/avatar';
+import { type AvatarPose } from '@/lib/avatar';
 import { type StoreItem } from '@/lib/store';
 import { font } from '@/lib/theme';
 
 const POSE_EMOJIS: Record<AvatarPose, string> = {
-  jogging: '🏃',
-  stretching: '🧘',
   idle: '⚽',
   arms_crossed: '💪',
-  warmup: '🔥',
+  celebration: '🔥',
+  focused: '🧘',
+};
+
+const POSE_LABELS: Record<AvatarPose, string> = {
+  idle: 'Estandar',
+  arms_crossed: 'Capitán',
+  celebration: 'Celebración',
+  focused: 'Concentrado',
 };
 
 export function StorePreview({ item, size = 'sm' }: { item: StoreItem; size?: 'sm' | 'lg' }) {
