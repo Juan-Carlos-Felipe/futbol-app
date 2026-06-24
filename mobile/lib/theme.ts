@@ -15,6 +15,7 @@ export const colors = {
   textMuted: '#DADADA',
   textSubtle: '#797979',
   border: 'rgba(255,255,255,0.08)',
+  primaryDark: '#0a3d1f',
 };
 
 export const gradients = {
@@ -46,6 +47,10 @@ export const font = {
   semiBold: 'Poppins_600SemiBold',
   bold: 'Poppins_700Bold',
   extraBold: 'Poppins_800ExtraBold',
+  bebas: 'BebasNeue_400Regular',
+  dmRegular: 'DMSans_400Regular',
+  dmMedium: 'DMSans_500Medium',
+  dmBold: 'DMSans_700Bold',
 };
 
 export const shadows = {

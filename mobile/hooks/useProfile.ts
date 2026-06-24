@@ -9,6 +9,12 @@ export type UserProfile = {
   avatar_url: string | null;
   skills: { attack: number; defense: number; speed: number; stamina: number };
   created_at: string;
+  card_photo_url?: string;
+  card_shirt_id: string;
+  card_shirt_number: number;
+  card_position: 'DEL' | 'MED' | 'DEF' | 'ARQ';
+  card_country_flag: string;
+  card_style: 'classic' | 'dark' | 'gold' | 'ice' | 'fire';
 };
 
 export function useProfile() {
