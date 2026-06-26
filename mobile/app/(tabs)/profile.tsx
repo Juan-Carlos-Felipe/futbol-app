@@ -12,8 +12,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import AvatarPreview from '@/components/avatar/AvatarPreview';
-import AvatarSetup from '@/components/avatar/AvatarSetup';
 import BalonesWidget from '@/components/store/BalonesWidget';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import EloDisplay from '@/components/ui/EloDisplay';
@@ -26,11 +24,6 @@ import { useUserInventory } from '@/hooks/useStore';
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { useMyTeams } from '@/hooks/useTeams';
 import { signOut } from '@/lib/auth';
-import {
-  DEFAULT_TEAM_COLOR,
-  loadAvatarConfig,
-  type AvatarConfig,
-} from '@/lib/avatar';
 import { getFifaRating } from '@/lib/elo';
 import { colors, font, radii, shadows, spacing } from '@/lib/theme';
 import { SectionTitle, SportCard, StatPill } from '@/components/ui/SportPrimitives';
@@ -97,7 +90,6 @@ export default function ProfileScreen() {
   const { form } = useTeamRecentForm(activeTeamId);
   const [displayName, setDisplayName] = useState('');
   const [editing, setEditing] = useState(false);
-  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(null);
   const [showAvatarSetup, setShowAvatarSetup] = useState(false);
 
   const playerWinRate =
@@ -111,27 +103,10 @@ export default function ProfileScreen() {
   const fifaRating = getFifaRating(playerElo);
   const equippedColor =
     inventory.find((item) => item.equipped && item.store_items?.type === 'jersey_color')
-      ?.store_items?.data?.color ?? avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR;
+      ?.store_items?.data?.color ?? '#16a34a';
   const equippedPose =
     inventory.find((item) => item.equipped && item.store_items?.type === 'pose')?.store_items?.data
-      ?.pose ?? avatarConfig?.selectedPose ?? 'jogging';
-
-  useEffect(() => {
-    let mounted = true;
-
-    if (!userId) {
-      setAvatarConfig(null);
-      return;
-    }
-
-    loadAvatarConfig(userId).then((config) => {
-      if (mounted) setAvatarConfig(config);
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [userId]);
+      ?.pose ?? 'jogging';
 
   if (isLoading) {
     return (
@@ -157,9 +132,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <PlayerStickerCard
-        avatarConfig={avatarConfig}
-        avatarUrl={avatarConfig?.avatarUrl ?? null}
-        avatarName={avatarConfig?.avatarName}
+        avatarUrl={null}
         displayName={profile?.display_name ?? 'Jugador'}
         email={profile?.email}
         editing={editing}
@@ -197,9 +170,9 @@ export default function ProfileScreen() {
         }
         avatarButton={
           userId ? (
-            <TouchableOpacity style={styles.editAvatarButton} onPress={() => setShowAvatarSetup(true)}>
+            <TouchableOpacity style={styles.editAvatarButton} onPress={() => router.push('/player-builder')}>
               <Text style={styles.editAvatarText}>
-                {avatarConfig?.avatarUrl ? 'Editar avatar' : 'Crear avatar'}
+                Player Builder
               </Text>
             </TouchableOpacity>
           ) : null
@@ -244,28 +217,11 @@ export default function ProfileScreen() {
         <Text style={styles.logoutText}>Cerrar sesion</Text>
       </TouchableOpacity>
 
-      {userId ? (
-        <Modal
-          visible={showAvatarSetup}
-          animationType="slide"
-          onRequestClose={() => setShowAvatarSetup(false)}
-        >
-          <AvatarSetup
-            userId={userId}
-            currentConfig={avatarConfig}
-            onComplete={(config) => {
-              setAvatarConfig(config);
-              setShowAvatarSetup(false);
-            }}
-          />
-        </Modal>
-      ) : null}
     </ScrollView>
   );
 }
 
 function PlayerStickerCard({
-  avatarConfig,
   avatarUrl,
   avatarName,
   displayName,
@@ -284,7 +240,6 @@ function PlayerStickerCard({
   inventorySlot,
   avatarButton,
 }: {
-  avatarConfig: AvatarConfig | null;
   avatarUrl: string | null;
   avatarName?: string;
   displayName: string;
@@ -296,7 +251,7 @@ function PlayerStickerCard({
   onSaveProfile: () => void;
   fifaRating: number;
   playerElo: number;
-  pose: AvatarConfig['selectedPose'];
+  pose: string;
   teamColor: string;
   skills: PlayerSkill[];
   playerStats: { matches: number; wins: number; goals: number; assists: number; winRate: number };
@@ -327,18 +282,9 @@ function PlayerStickerCard({
       </View>
 
       <View style={styles.stickerAvatarWrap}>
-        <AvatarPreview
-          avatarUrl={avatarUrl}
-          pose={pose}
-          teamColor={teamColor}
-          faceAdjustment={avatarConfig?.faceAdjustment}
-          generatedFeatures={avatarConfig?.generatedFeatures}
-          avatarName={avatarName}
-          width={250}
-          height={330}
-          autoRotate
-          showControls={false}
-        />
+        <View style={{ width: 250, height: 330, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}>
+           <Text style={{ color: '#fff', fontSize: 80 }}>👤</Text>
+        </View>
       </View>
 
       <View style={styles.identityPanel}>
