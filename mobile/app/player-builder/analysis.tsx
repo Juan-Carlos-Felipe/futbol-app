@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, Animated, Easing } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
+import { StyleSheet, Text, View, SafeAreaView, Animated, Easing, Alert } from 'react-native';
+import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { colors, font, spacing } from '@/lib/theme';
+import { FaceAnalysisService, FaceAnalysisError } from '@/modules/player-builder/services/FaceAnalysisService';
 import { AvatarConfigGenerator } from '@/modules/player-builder/services/AvatarConfigGenerator';
 
 const MESSAGES = [
@@ -15,24 +16,59 @@ const MESSAGES = [
 
 export default function AvatarAnalysisScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [progress] = useState(new Animated.Value(0));
   const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
-    // Animación de la barra de progreso
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: 5000,
-      easing: Easing.linear,
-      useNativeDriver: false,
-    }).start(() => {
-      // Al finalizar, generar config y navegar
-      const config = AvatarConfigGenerator.generateRandom();
-      router.replace({
-        pathname: '/player-builder/editor',
-        params: { initialConfig: JSON.stringify(config) }
+    const runAnalysis = async () => {
+      // Animación de la barra de progreso
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: 4000,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      }).start(async () => {
+        // Ejecutar análisis real
+        try {
+          const imageUri = (params.imageUri as string) || 'dummy-uri';
+          const config = await FaceAnalysisService.analyzeSelfie(imageUri);
+          router.replace({
+            pathname: '/player-builder/editor',
+            params: { initialConfig: JSON.stringify(config) }
+          });
+        } catch (error) {
+          if (error instanceof FaceAnalysisError) {
+            if (error.code === 'MODEL_ERROR') {
+              Alert.alert('Aviso', 'No se pudo cargar el analizador facial. Se usará una configuración inicial editable.', [
+                { text: 'Continuar', onPress: () => {
+                  const config = AvatarConfigGenerator.generateRandom();
+                  router.replace({
+                    pathname: '/player-builder/editor',
+                    params: { initialConfig: JSON.stringify(config) }
+                  });
+                }}
+              ]);
+            } else {
+              Alert.alert('Error de Análisis', error.message, [
+                { text: 'Volver a intentar', onPress: () => router.back() },
+                { text: 'Crear manualmente', onPress: () => {
+                  const config = AvatarConfigGenerator.generateRandom();
+                  router.replace({
+                    pathname: '/player-builder/editor',
+                    params: { initialConfig: JSON.stringify(config) }
+                  });
+                }}
+              ]);
+            }
+          } else {
+            router.replace('/player-builder');
+          }
+        }
       });
-    });
+    };
+
+    runAnalysis();
 
     // Ciclo de mensajes
     const interval = setInterval(() => {

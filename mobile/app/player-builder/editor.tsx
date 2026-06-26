@@ -38,7 +38,7 @@ export default function AvatarEditorScreen() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>('rostro');
   const [showJson, setShowJson] = useState(false);
 
-  const updateConfig = (key: keyof AvatarConfig, value: any) => {
+  const updateConfig = <K extends keyof AvatarConfig>(key: K, value: AvatarConfig[K]) => {
     setConfig(prev => ({ ...prev, [key]: value }));
   };
 
@@ -112,7 +112,8 @@ export default function AvatarEditorScreen() {
 
                 {expandedCategory === category.id && (
                   <View style={styles.categoryFields}>
-                    {category.fields.map(field => {
+                    {category.fields.map(fieldName => {
+                      const field = fieldName as keyof AvatarConfig | 'position';
                       if (field === 'position') {
                         return (
                           <View key={field} style={styles.fieldRow}>
@@ -132,22 +133,23 @@ export default function AvatarEditorScreen() {
                         );
                       }
 
-                      const val = (config as any)[field];
+                      const val = config[field as keyof AvatarConfig];
                       const isSlider = typeof val === 'number';
 
                       if (isSlider) {
+                        const sliderKey = field as keyof AvatarConfig;
                         return (
                           <View key={field} style={styles.fieldRow}>
                             <View style={styles.fieldLabelRow}>
                               <Text style={styles.fieldLabel}>{field}</Text>
-                              <Text style={styles.fieldValue}>{Math.round(val)}</Text>
+                              <Text style={styles.fieldValue}>{Math.round(val as number)}</Text>
                             </View>
                             <Slider
                               style={styles.slider}
                               minimumValue={0}
                               maximumValue={100}
-                              value={val}
-                              onValueChange={(v: number) => updateConfig(field as keyof AvatarConfig, v)}
+                              value={val as number}
+                              onValueChange={(v: number) => updateConfig(sliderKey, v as any)}
                               minimumTrackTintColor={colors.accent}
                               maximumTrackTintColor={colors.border}
                               thumbTintColor={colors.accent}

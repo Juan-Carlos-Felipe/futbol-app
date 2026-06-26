@@ -41,8 +41,10 @@ export default function SelfieCaptureScreen() {
 
   const handleContinue = () => {
     if (!image) return;
-    // En una implementación real pasaríamos la imagen al análisis
-    router.push('/player-builder/analysis');
+    router.push({
+      pathname: '/player-builder/analysis',
+      params: { imageUri: image }
+    });
   };
 
   return (
@@ -61,6 +63,9 @@ export default function SelfieCaptureScreen() {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructions}>
             Asegúrate de estar en un lugar bien iluminado y de frente a la cámara.
+          </Text>
+          <Text style={styles.privacyNote}>
+            Tu selfie se procesa localmente y no se envía a servidores externos.
           </Text>
         </View>
 
@@ -129,6 +134,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  privacyNote: {
+    color: colors.accent,
+    fontFamily: font.bold,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 8,
+    opacity: 0.8,
   },
   previewContainer: {
     width: '100%',
