@@ -1,28 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import GeneratedFootballAvatar from '@/components/avatar/GeneratedFootballAvatar';
 import {
-  DEMO_AVATAR_URL,
   DEFAULT_FACE_ADJUSTMENT,
-  getReadyPlayerMePreviewUrl,
-  isReadyPlayerMeUrl,
   type AvatarFaceAdjustment,
   type AvatarPose,
-  type GeneratedAvatarFeatures,
 } from '@/lib/avatar';
 import { colors, font, radii } from '@/lib/theme';
 
 const REALISTIC_PLAYER_BODY = require('../../assets/avatar/player-body-arms-crossed.png');
 const BODY_ASSET = { width: 914, height: 1721 };
-const BODY_FACE_BOX = { x: 370, y: 218, width: 176, height: 232 };
+// Ajustamos el face box para que sea un poco más grande y tome cuello/pecho
+const BODY_FACE_BOX = { x: 360, y: 200, width: 196, height: 260 };
 
 type ProfessionalAvatarPreviewProps = {
   avatarUrl: string | null;
@@ -31,7 +25,6 @@ type ProfessionalAvatarPreviewProps = {
   width?: number;
   height?: number;
   faceAdjustment?: AvatarFaceAdjustment;
-  generatedFeatures?: GeneratedAvatarFeatures | null;
   avatarName?: string;
   compact?: boolean;
 };
@@ -45,42 +38,9 @@ export default function ProfessionalAvatarPreview({
   faceAdjustment,
   avatarName,
   compact = false,
-  generatedFeatures,
 }: ProfessionalAvatarPreviewProps) {
-  const [loading, setLoading] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [retryKey, setRetryKey] = useState(0);
-  const loadTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isRpmAvatar = isReadyPlayerMeUrl(avatarUrl) && avatarUrl !== DEMO_AVATAR_URL;
-  const isGeneratedAvatar = Boolean(generatedFeatures || avatarUrl?.startsWith('generated://'));
-  const faceUri = !isGeneratedAvatar && avatarUrl && !isRpmAvatar && avatarUrl !== DEMO_AVATAR_URL ? avatarUrl : null;
-  const previewUrl = useMemo(
-    () => (isRpmAvatar ? getReadyPlayerMePreviewUrl(avatarUrl, compact ? 512 : 768) : null),
-    [avatarUrl, compact, isRpmAvatar, retryKey]
-  );
-
-  useEffect(() => {
-    if (loadTimeout.current) clearTimeout(loadTimeout.current);
-    setFailed(false);
-    setLoading(Boolean(previewUrl));
-
-    if (!previewUrl) return;
-
-    loadTimeout.current = setTimeout(() => {
-      setLoading(false);
-      setFailed(true);
-    }, 9000);
-
-    return () => {
-      if (loadTimeout.current) clearTimeout(loadTimeout.current);
-    };
-  }, [previewUrl]);
-
-  function retry() {
-    setFailed(false);
-    setLoading(Boolean(previewUrl));
-    setRetryKey((current) => current + 1);
-  }
+  // En el nuevo sistema, avatarUrl es directamente la URI de la foto
+  const faceUri = avatarUrl;
 
   return (
     <View style={[styles.stage, { width, height }]}>
@@ -99,28 +59,8 @@ export default function ProfessionalAvatarPreview({
       <Text style={styles.poseTag}>{getPoseLabel(pose)}</Text>
 
       <View style={styles.floorShadow} />
-      {isGeneratedAvatar && generatedFeatures ? (
-        <View style={styles.generatedAvatarWrap}>
-          <GeneratedFootballAvatar features={generatedFeatures} teamColor={teamColor} />
-        </View>
-      ) : previewUrl && !failed ? (
-        <Image
-          key={`${previewUrl}-${retryKey}`}
-          source={{ uri: previewUrl }}
-          style={[styles.avatarImage, compact && styles.avatarImageCompact]}
-          resizeMode="contain"
-          onLoadStart={() => setLoading(true)}
-          onLoadEnd={() => {
-            if (loadTimeout.current) clearTimeout(loadTimeout.current);
-            setLoading(false);
-          }}
-          onError={() => {
-            if (loadTimeout.current) clearTimeout(loadTimeout.current);
-            setLoading(false);
-            setFailed(true);
-          }}
-        />
-      ) : faceUri ? (
+
+      {faceUri ? (
         <PremiumPlayerComposite
           faceUri={faceUri}
           teamColor={teamColor}
@@ -130,22 +70,6 @@ export default function ProfessionalAvatarPreview({
       ) : (
         <PremiumSilhouette teamColor={teamColor} compact={compact} />
       )}
-
-      {loading ? (
-        <View style={styles.loadingLayer}>
-          <ActivityIndicator color={colors.warning} />
-          <Text style={styles.loadingText}>Cargando avatar</Text>
-        </View>
-      ) : null}
-
-      {failed ? (
-        <View style={styles.errorLayer}>
-          <Text style={styles.errorTitle}>No se pudo cargar</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={retry}>
-            <Text style={styles.retryText}>Reintentar</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
 
       <LinearGradient
         colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)', 'rgba(0,0,0,0.32)']}
@@ -172,6 +96,7 @@ function PremiumPlayerComposite({
   const bodyWidth = bodyHeight ? (bodyHeight * BODY_ASSET.width) / BODY_ASSET.height : 0;
   const bodyLeft = layout ? (layout.width - bodyWidth) / 2 : 0;
   const bodyTop = layout ? -layout.height * (compact ? 0.03 : 0.04) : 0;
+
   const faceFrame = layout
     ? {
         left: bodyLeft + (BODY_FACE_BOX.x / BODY_ASSET.width) * bodyWidth,
@@ -204,36 +129,36 @@ function PremiumPlayerComposite({
       <View style={[styles.kitColorWash, { backgroundColor: teamColor }]} />
       <View style={[styles.kitStripe, { backgroundColor: lightenTeam(teamColor) }]} />
       {faceFrame ? (
-      <View
-        style={[
-          styles.realFaceFrame,
-          {
-            height: faceFrame.height,
-            left: faceFrame.left,
-            top: faceFrame.top,
-            width: faceFrame.width,
-          },
-        ]}
-      >
-        <Image
-          source={{ uri: faceUri }}
+        <View
           style={[
-            styles.faceImage,
+            styles.realFaceFrame,
             {
-              transform: [
-                { translateX: adjust.offsetX },
-                { translateY: adjust.offsetY },
-                { scale: adjust.scale },
-              ],
+              height: faceFrame.height,
+              left: faceFrame.left,
+              top: faceFrame.top,
+              width: faceFrame.width,
             },
           ]}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={['rgba(255,255,255,0.16)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.20)']}
-          style={styles.faceDepth}
-        />
-      </View>
+        >
+          <Image
+            source={{ uri: faceUri }}
+            style={[
+              styles.faceImage,
+              {
+                transform: [
+                  { translateX: adjust.offsetX },
+                  { translateY: adjust.offsetY },
+                  { scale: adjust.scale },
+                ],
+              },
+            ]}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['rgba(255,255,255,0.16)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.20)']}
+            style={styles.faceDepth}
+          />
+        </View>
       ) : null}
     </View>
   );
@@ -261,13 +186,10 @@ function lightenTeam(color: string) {
 
 function getPoseLabel(pose: AvatarPose) {
   const labels: Record<AvatarPose, string> = {
-    jogging: 'Trotando',
-    stretching: 'Estirando',
     idle: 'Retrato',
-    arms_crossed: 'Capitan',
-    warmup: 'Calentando',
+    arms_crossed: 'Capitán',
   };
-  return labels[pose];
+  return labels[pose] || 'Jugador';
 }
 
 const styles = StyleSheet.create({
@@ -343,25 +265,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '62%',
   },
-  generatedAvatarWrap: {
-    bottom: -18,
-    height: '108%',
-    left: '-2%',
-    position: 'absolute',
-    right: '-2%',
-    zIndex: 2,
-  },
-  avatarImage: {
-    height: '96%',
-    marginBottom: -8,
-    width: '104%',
-    zIndex: 2,
-  },
-  avatarImageCompact: {
-    height: '102%',
-    marginBottom: -10,
-    width: '112%',
-  },
   playerComposite: {
     alignItems: 'center',
     bottom: 0,
@@ -423,46 +326,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 3,
   },
-  loadingLayer: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    backgroundColor: 'rgba(16,17,29,0.52)',
-    justifyContent: 'center',
-    zIndex: 6,
-  },
-  loadingText: {
-    color: colors.text,
-    fontFamily: font.semiBold,
-    fontSize: 11,
-    marginTop: 8,
-  },
-  errorLayer: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    backgroundColor: 'rgba(16,17,29,0.76)',
-    justifyContent: 'center',
-    padding: 18,
-    zIndex: 6,
-  },
-  errorTitle: {
-    color: colors.text,
-    fontFamily: font.bold,
-    fontSize: 12,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  retryButton: {
-    backgroundColor: colors.warning,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  retryText: {
-    color: colors.background,
-    fontFamily: font.bold,
-    fontSize: 12,
-    fontWeight: '900',
-  },
   silhouette: {
     alignItems: 'center',
     height: '78%',
@@ -474,36 +337,5 @@ const styles = StyleSheet.create({
   silhouetteCompact: {
     height: '72%',
     width: '68%',
-  },
-  silhouetteHead: {
-    backgroundColor: '#151827',
-    borderColor: 'rgba(244,183,64,0.48)',
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 56,
-    marginBottom: -2,
-    width: 48,
-  },
-  silhouetteNeck: {
-    borderRadius: 8,
-    height: 18,
-    opacity: 0.92,
-    width: 32,
-  },
-  silhouetteTorso: {
-    borderColor: 'rgba(255,255,255,0.25)',
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    borderWidth: 1,
-    height: 86,
-    width: '72%',
-  },
-  silhouetteShoulders: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 999,
-    bottom: 24,
-    height: 28,
-    position: 'absolute',
-    width: '100%',
   },
 });

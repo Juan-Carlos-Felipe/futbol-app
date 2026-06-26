@@ -23,11 +23,14 @@ export default function FaceOvalCamera({ onCancel, onCapture }: FaceOvalCameraPr
   const [permission, requestPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
   const frameWidth = Math.min(screenWidth - 28, 360);
   const frameHeight = frameWidth / 0.75;
-  const ovalWidth = frameWidth * 0.54;
-  const ovalHeight = ovalWidth * 1.42;
-  const ovalCenterY = frameHeight * 0.47;
+
+  // Aumentamos el ovalo para que tome cara, cuello y parte del pecho
+  const ovalWidth = frameWidth * 0.72;
+  const ovalHeight = ovalWidth * 1.35;
+  const ovalCenterY = frameHeight * 0.45;
 
   async function capture() {
     if (!cameraRef.current || isCapturing) return;
@@ -64,12 +67,12 @@ export default function FaceOvalCamera({ onCancel, onCapture }: FaceOvalCameraPr
   if (!permission.granted) {
     return (
       <View style={styles.permissionScreen}>
-        <Text style={styles.permissionTitle}>Permiso de camara</Text>
+        <Text style={styles.permissionTitle}>Permiso de cámara</Text>
         <Text style={styles.permissionText}>
-          Necesitamos la camara para alinear tu rostro dentro del ovalo del avatar.
+          Necesitamos la cámara para capturar tu foto de perfil de jugador.
         </Text>
         <TouchableOpacity style={styles.primaryButton} onPress={requestPermission}>
-          <Text style={styles.primaryText}>Permitir camara</Text>
+          <Text style={styles.primaryText}>Permitir cámara</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryButton} onPress={onCancel}>
           <Text style={styles.secondaryText}>Volver</Text>
@@ -87,10 +90,8 @@ export default function FaceOvalCamera({ onCancel, onCapture }: FaceOvalCameraPr
           <View style={[styles.middleRow, { height: ovalHeight }]}>
             <View style={styles.sideMask} />
             <View style={[styles.ovalGuide, { height: ovalHeight, width: ovalWidth }]}>
+              <View style={styles.shoulderGuide} />
               <View style={styles.eyeLine} />
-              <View style={styles.noseLine} />
-              <View style={styles.mouthLine} />
-              <View style={styles.chinLine} />
             </View>
             <View style={styles.sideMask} />
           </View>
@@ -101,13 +102,13 @@ export default function FaceOvalCamera({ onCancel, onCapture }: FaceOvalCameraPr
         <TouchableOpacity style={styles.closeButton} onPress={onCancel}>
           <Ionicons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerText}>Selfie frontal</Text>
+        <Text style={styles.headerText}>Foto de Jugador</Text>
       </View>
       <View style={styles.instructions}>
         <Text style={styles.instructionText}>
-          Coloca frente, ojos, nariz, boca y menton dentro del ovalo.
+          Alinea tu rostro y hombros dentro del área marcada.
         </Text>
-        <Text style={styles.statusText}>Se validara el rostro completo al capturar</Text>
+        <Text style={styles.statusText}>Captura cara, cuello y parte del pecho</Text>
       </View>
       <View style={styles.footer}>
         <TouchableOpacity style={styles.captureButton} onPress={capture} disabled={isCapturing}>
@@ -190,7 +191,6 @@ const styles = StyleSheet.create({
   },
   middleRow: {
     flexDirection: 'row',
-    height: 330,
   },
   sideMask: {
     backgroundColor: 'rgba(16,17,29,0.54)',
@@ -199,42 +199,26 @@ const styles = StyleSheet.create({
   ovalGuide: {
     alignItems: 'center',
     borderColor: colors.accent,
-    borderRadius: 150,
-    borderWidth: 3,
-    height: 330,
+    borderRadius: 180,
+    borderWidth: 2.5,
     justifyContent: 'center',
-    width: 245,
+  },
+  shoulderGuide: {
+    borderColor: 'rgba(210,181,255,0.4)',
+    borderTopLeftRadius: 60,
+    borderTopRightRadius: 60,
+    borderWidth: 2,
+    bottom: -2,
+    height: '35%',
+    position: 'absolute',
+    width: '120%',
   },
   eyeLine: {
-    backgroundColor: 'rgba(210,181,255,0.55)',
+    backgroundColor: 'rgba(210,181,255,0.3)',
     height: 1,
     position: 'absolute',
-    top: '36%',
-    width: '72%',
-  },
-  noseLine: {
-    backgroundColor: 'rgba(244,183,64,0.45)',
-    height: '26%',
-    position: 'absolute',
-    top: '39%',
-    width: 1,
-  },
-  mouthLine: {
-    backgroundColor: 'rgba(210,181,255,0.42)',
-    borderRadius: 999,
-    height: 1,
-    position: 'absolute',
-    top: '68%',
-    width: '42%',
-  },
-  chinLine: {
-    borderBottomColor: 'rgba(244,183,64,0.45)',
-    borderBottomWidth: 1,
-    borderRadius: 999,
-    bottom: '10%',
-    height: 16,
-    position: 'absolute',
-    width: '34%',
+    top: '38%',
+    width: '60%',
   },
   bottomMask: {
     backgroundColor: 'rgba(16,17,29,0.54)',
