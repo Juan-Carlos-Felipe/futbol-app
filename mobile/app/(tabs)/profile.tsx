@@ -114,7 +114,7 @@ export default function ProfileScreen() {
       ?.store_items?.data?.color ?? avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR;
   const equippedPose =
     inventory.find((item) => item.equipped && item.store_items?.type === 'pose')?.store_items?.data
-      ?.pose ?? avatarConfig?.selectedPose ?? 'jogging';
+      ?.pose ?? avatarConfig?.selectedPose ?? 'idle';
 
   useEffect(() => {
     let mounted = true;
@@ -199,7 +199,7 @@ export default function ProfileScreen() {
           userId ? (
             <TouchableOpacity style={styles.editAvatarButton} onPress={() => setShowAvatarSetup(true)}>
               <Text style={styles.editAvatarText}>
-                {avatarConfig?.avatarUrl ? 'Editar avatar' : 'Crear avatar'}
+                {avatarConfig?.avatarUrl ? 'Editar perfil' : 'Crear perfil'}
               </Text>
             </TouchableOpacity>
           ) : null
@@ -332,12 +332,10 @@ function PlayerStickerCard({
           pose={pose}
           teamColor={teamColor}
           faceAdjustment={avatarConfig?.faceAdjustment}
-          generatedFeatures={avatarConfig?.generatedFeatures}
           avatarName={avatarName}
           width={250}
           height={330}
-          autoRotate
-          showControls={false}
+          compact
         />
       </View>
 

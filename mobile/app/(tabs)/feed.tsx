@@ -167,17 +167,15 @@ function AvatarHero({
           avatarUrl={avatarConfig?.avatarUrl ?? null}
           pose={avatarConfig?.selectedPose ?? 'idle'}
           teamColor={avatarConfig?.teamColor ?? DEFAULT_TEAM_COLOR}
-          customization={avatarConfig?.customization}
           faceAdjustment={avatarConfig?.faceAdjustment}
-          generatedFeatures={avatarConfig?.generatedFeatures}
           avatarName={avatarConfig?.avatarName}
           width={140}
           height={200}
-          showControls={false}
+          compact
         />
         {userId && !avatarConfig?.avatarUrl ? (
           <TouchableOpacity style={styles.createAvatarButton} onPress={onCreateAvatar}>
-            <Text style={styles.createAvatarText}>Crear avatar</Text>
+            <Text style={styles.createAvatarText}>Crear perfil</Text>
           </TouchableOpacity>
         ) : null}
       </View>

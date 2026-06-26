@@ -1,5 +1,5 @@
 import ProfessionalAvatarPreview from '@/components/avatar/ProfessionalAvatarPreview';
-import type { AvatarCustomization, AvatarFaceAdjustment, AvatarPose, GeneratedAvatarFeatures } from '@/lib/avatar';
+import type { AvatarFaceAdjustment, AvatarPose } from '@/lib/avatar';
 
 type AvatarPreviewProps = {
   avatarUrl: string | null;
@@ -7,12 +7,9 @@ type AvatarPreviewProps = {
   teamColor: string;
   width?: number;
   height?: number;
-  autoRotate?: boolean;
-  customization?: Partial<AvatarCustomization>;
   faceAdjustment?: AvatarFaceAdjustment;
-  generatedFeatures?: GeneratedAvatarFeatures | null;
-  showControls?: boolean;
   avatarName?: string;
+  compact?: boolean;
 };
 
 export default function AvatarPreview({
@@ -21,25 +18,20 @@ export default function AvatarPreview({
   teamColor,
   width = 170,
   height = 240,
-  autoRotate,
-  customization,
   faceAdjustment,
-  generatedFeatures,
-  showControls,
   avatarName,
+  compact,
 }: AvatarPreviewProps) {
   return (
     <ProfessionalAvatarPreview
-      key={`${avatarUrl}-${pose}-${teamColor}-${JSON.stringify(customization ?? {})}`}
       avatarUrl={avatarUrl}
       pose={pose}
       teamColor={teamColor}
       width={width}
       height={height}
       faceAdjustment={faceAdjustment}
-      generatedFeatures={generatedFeatures}
       avatarName={avatarName}
-      compact={!showControls && !autoRotate}
+      compact={compact}
     />
   );
 }

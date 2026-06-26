@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,35 +12,24 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import AvatarConfigPanel from '@/components/avatar/AvatarConfig';
 import AvatarPreview from '@/components/avatar/AvatarPreview';
 import FaceOvalCamera, { type FaceCaptureGuide } from '@/components/avatar/FaceOvalCamera';
-import RPMWebView, { getReadyPlayerMeCreatorUrl } from '@/components/avatar/RPMWebView';
-import { avatarGenerationService } from '@/lib/avatarGenerationService';
 import {
   type AvatarConfig,
   type AvatarPhotoSource,
-  type GeneratedAvatarFeatures,
-  DEFAULT_FACE_ADJUSTMENT,
+  TEAM_COLORS,
   createDefaultAvatarConfig,
   normalizeAvatarConfig,
+  uploadProfilePhoto,
 } from '@/lib/avatar';
-import { analyzeSelfieForAvatarWithLandmarks, getFaceDetectionMessage } from '@/lib/avatarFaceAnalysis';
 import { useAvatarStore } from '@/lib/avatarStore';
-import { colors, font, gradients, radii, shadows } from '@/lib/theme';
+import { colors, font, radii, shadows } from '@/lib/theme';
 
 type AvatarSetupProps = {
   userId: string;
   currentConfig: AvatarConfig | null;
   onComplete: (config: AvatarConfig) => void;
 };
-
-const GENERATION_MESSAGES = [
-  'Analizando rasgos de la foto...',
-  'Preparando modelo base...',
-  'Aplicando camiseta y estilo...',
-  'Dejando todo listo para guardar...',
-];
 
 export default function AvatarSetup({ userId, currentConfig, onComplete }: AvatarSetupProps) {
   const store = useAvatarStore();
@@ -50,12 +39,8 @@ export default function AvatarSetup({ userId, currentConfig, onComplete }: Avata
   const [selectedPhoto, setSelectedPhoto] = useState<AvatarPhotoSource | null>(
     currentConfig?.photo ?? null
   );
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [messageIndex, setMessageIndex] = useState(0);
-  const [modeMessage, setModeMessage] = useState<string | null>(null);
-  const [showRpmCreator, setShowRpmCreator] = useState(false);
   const [showOvalCamera, setShowOvalCamera] = useState(false);
-  const rpmCreatorUrl = getReadyPlayerMeCreatorUrl();
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const nextConfig = normalizeAvatarConfig(currentConfig ?? createDefaultAvatarConfig(userId), userId);
@@ -64,26 +49,10 @@ export default function AvatarSetup({ userId, currentConfig, onComplete }: Avata
     store.setConfig(nextConfig);
   }, [currentConfig, userId]);
 
-  useEffect(() => {
-    if (!isGenerating) return;
-
-    const interval = setInterval(() => {
-      setMessageIndex((current) => (current + 1) % GENERATION_MESSAGES.length);
-    }, 650);
-
-    return () => clearInterval(interval);
-  }, [isGenerating]);
-
-  const providerConfigured = avatarGenerationService.isConfigured();
-  const previewConfig = useMemo(
-    () => config,
-    [config]
-  );
-
   async function pickPhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos para preparar el avatar.');
+      Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos para tu perfil.');
       return;
     }
 
@@ -107,172 +76,65 @@ export default function AvatarSetup({ userId, currentConfig, onComplete }: Avata
     setShowOvalCamera(true);
   }
 
-  async function handleOvalCapture(uri: string, guide: FaceCaptureGuide) {
+  async function handleOvalCapture(uri: string, _guide: FaceCaptureGuide) {
     setShowOvalCamera(false);
     await handlePhoto({
       uri,
       source: 'camera',
       createdAt: new Date().toISOString(),
-    }, guide);
+    });
   }
 
-  async function handlePhoto(photo: AvatarPhotoSource, guide?: FaceCaptureGuide) {
-    const prepared = await prepareFacePhoto(photo, guide);
-    if (!prepared) {
-      const blankConfig: AvatarConfig = {
-        ...config,
-        avatarUrl: null,
-        photo: null,
-        source: 'manual',
-        provider: null,
-        modelFormat: null,
-        generatedFeatures: null,
-        updatedAt: new Date().toISOString(),
-      };
-      setSelectedPhoto(null);
-      setConfig(blankConfig);
-      store.setConfig(blankConfig);
-      await store.save(blankConfig);
-      return;
-    }
-    setSelectedPhoto(prepared.photo);
-    setConfig((current) => ({
-      ...current,
-      photo: null,
-      source: 'photo',
-      generatedFeatures: prepared.features,
-      updatedAt: new Date().toISOString(),
-    }));
-    await generateAvatar(prepared.photo, prepared.features);
-  }
-
-  async function prepareFacePhoto(
-    photo: AvatarPhotoSource,
-    _guide?: FaceCaptureGuide
-  ): Promise<{ photo: AvatarPhotoSource; features: GeneratedAvatarFeatures } | null> {
-    // No recortamos antes de analizar: algunas camaras entregan una resolucion/orientacion
-    // distinta al preview y eso terminaba capturando solo frente/pelo.
+  async function handlePhoto(photo: AvatarPhotoSource) {
     const actions = [{ resize: { width: 900 } }];
     const candidate = await ImageManipulator.manipulateAsync(
       photo.uri,
       actions,
-      { base64: true, compress: 0.92, format: ImageManipulator.SaveFormat.JPEG }
+      { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG }
     );
 
-    const analysis = await analyzeSelfieForAvatarWithLandmarks(candidate.base64 ?? '');
-    if (!analysis.detected || !analysis.features) {
-      Alert.alert('Rostro no detectado', getFaceDetectionMessage(analysis.reason));
-      return null;
-    }
+    const finalPhoto = { ...photo, uri: candidate.uri };
+    setSelectedPhoto(finalPhoto);
 
-    return {
-      photo: {
-        ...photo,
-        uri: candidate.uri,
-      },
-      features: analysis.features,
-    };
-  }
-
-  async function generateAvatar(photo: AvatarPhotoSource, features: GeneratedAvatarFeatures) {
-    setIsGenerating(true);
-    setMessageIndex(0);
-    setModeMessage(null);
-
-    try {
-      const result = await avatarGenerationService.generateFromPhoto({
-        userId,
-        photo,
-        avatarName: config.avatarName,
-        teamColor: config.teamColor,
-        customization: config.customization,
-        generatedFeatures: features,
-      });
-
-      const nextConfig: AvatarConfig = {
-        ...config,
-        avatarUrl: result.avatarUrl,
-        photo: null,
-        source: result.provider === 'local-face-analysis' || !result.provider ? 'photo' : 'external_provider',
-        provider: result.provider,
-        modelFormat: result.modelFormat,
-        faceAdjustment: DEFAULT_FACE_ADJUSTMENT,
-        generatedFeatures: features,
-        avatarVersion: 2,
-        updatedAt: new Date().toISOString(),
-      };
-
-      setConfig(nextConfig);
-      store.setConfig(nextConfig);
-      await store.save(nextConfig);
-      setModeMessage(result.message);
-    } catch (error) {
-      Alert.alert(
-        'No se pudo generar',
-        error instanceof Error ? error.message : 'Intenta nuevamente con otra foto.'
-      );
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-
-  async function handleReadyPlayerMeAvatar(avatarUrl: string) {
     const nextConfig: AvatarConfig = {
       ...config,
-      avatarUrl,
-      source: 'external_provider',
-      provider: 'readyplayerme',
-      modelFormat: avatarUrl.endsWith('.gltf') ? 'gltf' : 'glb',
+      avatarUrl: candidate.uri, // Previsualización local
+      photo: finalPhoto,
+      source: 'photo',
       updatedAt: new Date().toISOString(),
     };
 
-    try {
-      setConfig(nextConfig);
-      store.setConfig(nextConfig);
-      await store.save(nextConfig);
-      setShowRpmCreator(false);
-      onComplete(nextConfig);
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'No se pudo guardar el avatar profesional.'
-      );
-    }
+    setConfig(nextConfig);
+    store.setConfig(nextConfig);
   }
 
   async function save() {
-    const nextConfig = avatarGenerationService.buildManualConfig({
-      ...config,
-      photo: selectedPhoto,
-      updatedAt: new Date().toISOString(),
-    });
-
+    setIsUploading(true);
     try {
-      await store.save(nextConfig);
-      onComplete(nextConfig);
+      let finalAvatarUrl = config.avatarUrl;
+
+      // Si la foto es local (file://), subirla a Supabase
+      if (selectedPhoto?.uri && (selectedPhoto.uri.startsWith('file://') || selectedPhoto.uri.startsWith('content://'))) {
+        finalAvatarUrl = await uploadProfilePhoto(userId, selectedPhoto.uri);
+      }
+
+      const finalConfig = {
+        ...config,
+        avatarUrl: finalAvatarUrl,
+        photo: selectedPhoto ? { ...selectedPhoto, uri: finalAvatarUrl! } : null,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await store.save(finalConfig);
+      onComplete(finalConfig);
     } catch (error) {
       Alert.alert(
         'Error',
-        error instanceof Error ? error.message : 'No se pudo guardar el avatar.'
+        error instanceof Error ? error.message : 'No se pudo guardar el perfil.'
       );
+    } finally {
+      setIsUploading(false);
     }
-  }
-
-  if (showRpmCreator) {
-    return (
-      <View style={styles.screen}>
-        <View style={styles.rpmHeader}>
-          <TouchableOpacity style={styles.rpmCloseButton} onPress={() => setShowRpmCreator(false)}>
-            <Ionicons name="chevron-back" size={20} color={colors.text} />
-            <Text style={styles.secondaryButtonText}>Volver</Text>
-          </TouchableOpacity>
-          <Text style={styles.rpmTitle}>Ready Player Me</Text>
-        </View>
-        {rpmCreatorUrl ? (
-          <RPMWebView creatorUrl={rpmCreatorUrl} onAvatarCreated={handleReadyPlayerMeAvatar} />
-        ) : null}
-      </View>
-    );
   }
 
   if (showOvalCamera) {
@@ -283,105 +145,98 @@ export default function AvatarSetup({ userId, currentConfig, onComplete }: Avata
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.kicker}>MI AVATAR</Text>
-          <Text style={styles.title}>Creador 3D</Text>
+          <Text style={styles.kicker}>MI PERFIL</Text>
+          <Text style={styles.title}>Foto de Jugador</Text>
           <Text style={styles.subtitle}>
-            Personaliza tu jugador, guarda cambios y deja preparado el flujo desde selfie.
+            Sube tu mejor foto futbolera para aparecer en las láminas y partidos.
           </Text>
         </View>
 
         <View style={styles.previewCard}>
           <AvatarPreview
-            avatarUrl={previewConfig.avatarUrl}
-            pose={previewConfig.selectedPose}
-            teamColor={previewConfig.teamColor}
-            customization={previewConfig.customization}
-            faceAdjustment={previewConfig.faceAdjustment}
-            generatedFeatures={previewConfig.generatedFeatures}
-            avatarName={previewConfig.avatarName}
+            avatarUrl={config.avatarUrl}
+            pose={config.selectedPose}
+            teamColor={config.teamColor}
+            avatarName={config.avatarName}
+            faceAdjustment={config.faceAdjustment}
             width={260}
             height={330}
-            autoRotate
-            showControls
           />
-          {isGenerating ? (
-            <View style={styles.generatingOverlay}>
+          {isUploading && (
+            <View style={styles.uploadingOverlay}>
               <ActivityIndicator color={colors.accent} size="large" />
-              <Text style={styles.generatingText}>{GENERATION_MESSAGES[messageIndex]}</Text>
+              <Text style={styles.uploadingText}>Subiendo perfil...</Text>
             </View>
-          ) : null}
+          )}
         </View>
 
         <View style={styles.photoCard}>
           <View style={styles.photoHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Crear avatar desde foto</Text>
+              <Text style={styles.sectionTitle}>Captura tu perfil</Text>
               <Text style={styles.privacyText}>
-                Toma la foto con el rostro dentro del ovalo. La app lo ajusta al cuerpo del jugador.
+                La foto se ajustará automáticamente al cuerpo del jugador. Prueba con diferentes poses.
               </Text>
             </View>
-            <Ionicons name="shield-checkmark-outline" size={24} color={colors.accent} />
+            <Ionicons name="camera-reverse-outline" size={24} color={colors.accent} />
           </View>
 
           {selectedPhoto ? (
             <View style={styles.photoPreviewRow}>
               <Image source={{ uri: selectedPhoto.uri }} style={styles.photoPreview} />
               <View style={styles.photoMeta}>
-                <Text style={styles.photoTitle}>Selfie lista</Text>
+                <Text style={styles.photoTitle}>Foto seleccionada</Text>
                 <Text style={styles.photoSubtitle}>
-                  Origen: {selectedPhoto.source === 'camera' ? 'Camara' : 'Galeria'}
+                  Origen: {selectedPhoto.source === 'camera' ? 'Cámara' : 'Galería'}
                 </Text>
               </View>
+              <TouchableOpacity onPress={() => {
+                setSelectedPhoto(null);
+                setConfig(c => ({ ...c, avatarUrl: null, photo: null }));
+              }} disabled={isUploading}>
+                <Ionicons name="trash-outline" size={20} color={colors.danger} />
+              </TouchableOpacity>
             </View>
           ) : null}
 
           <View style={styles.photoActions}>
-            <TouchableOpacity style={styles.secondaryButton} onPress={pickPhoto} disabled={isGenerating}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={pickPhoto} disabled={isUploading}>
               <Ionicons name="image-outline" size={18} color={colors.text} />
-              <Text style={styles.secondaryButtonText}>Subir selfie</Text>
+              <Text style={styles.secondaryButtonText}>Subir foto</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton} onPress={takePhoto} disabled={isGenerating}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={takePhoto} disabled={isUploading}>
               <Ionicons name="camera-outline" size={18} color={colors.text} />
               <Text style={styles.secondaryButtonText}>Tomar foto</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.rpmButton}
-            onPress={async () => {
-              if (!rpmCreatorUrl) {
-                setShowOvalCamera(true);
-                return;
-              }
-              setShowRpmCreator(true);
-            }}
-            disabled={isGenerating}
-          >
-            <Ionicons name="body-outline" size={18} color={colors.background} />
-            <Text style={styles.rpmButtonText}>Crear avatar profesional</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.providerStatus}>
-            {providerConfigured
-              ? 'Proveedor externo configurado para generar GLB/GLTF.'
-              : 'Modo foto activo: captura tu rostro y se adapta al jugador de la lamina.'}
-          </Text>
-          {modeMessage ? <Text style={styles.modeMessage}>{modeMessage}</Text> : null}
         </View>
 
         <View style={styles.configCard}>
-          <AvatarConfigPanel config={config} onChange={(nextConfig) => {
-            setConfig(nextConfig);
-            store.setConfig(nextConfig);
-          }} />
+          <Text style={styles.sectionTitle}>Color de Camiseta</Text>
+          <Text style={styles.privacyText}>Elige el color de tu equipo para el preview.</Text>
+          <View style={styles.colorGrid}>
+            {TEAM_COLORS.map((color) => (
+              <TouchableOpacity
+                key={color}
+                style={[
+                  styles.colorOption,
+                  { backgroundColor: color },
+                  config.teamColor === color && styles.selectedColor,
+                ]}
+                onPress={() => setConfig({ ...config, teamColor: color })}
+                disabled={isUploading}
+              />
+            ))}
+          </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, (isGenerating || store.loading) && styles.saveButtonDisabled]}
+          style={[styles.saveButton, (store.loading || isUploading) && styles.saveButtonDisabled]}
           onPress={save}
-          disabled={isGenerating || store.loading}
+          disabled={store.loading || isUploading}
         >
-          {store.loading ? <ActivityIndicator color={colors.background} /> : null}
-          <Text style={styles.saveText}>{store.loading ? 'Guardando...' : 'Guardar avatar'}</Text>
+          { (store.loading || isUploading) ? <ActivityIndicator color={colors.background} /> : null}
+          <Text style={styles.saveText}>{(store.loading || isUploading) ? 'Guardando...' : 'Guardar Perfil'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -425,17 +280,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     ...shadows.card,
   },
-  generatingOverlay: {
+  uploadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    backgroundColor: 'rgba(23,24,39,0.86)',
+    backgroundColor: 'rgba(23,24,39,0.7)',
     justifyContent: 'center',
+    zIndex: 10,
   },
-  generatingText: {
+  uploadingText: {
     color: colors.text,
     fontFamily: font.bold,
     fontSize: 14,
-    fontWeight: '900',
     marginTop: 12,
   },
   photoCard: {
@@ -475,25 +330,6 @@ const styles = StyleSheet.create({
   photoTitle: { color: colors.text, fontFamily: font.bold, fontSize: 14, fontWeight: '900' },
   photoSubtitle: { color: colors.textSubtle, fontFamily: font.regular, fontSize: 12, marginTop: 3 },
   photoActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  rpmHeader: {
-    alignItems: 'center',
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 14,
-  },
-  rpmCloseButton: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  rpmTitle: {
-    color: colors.text,
-    fontFamily: font.bold,
-    fontSize: 14,
-    fontWeight: '900',
-  },
   secondaryButton: {
     alignItems: 'center',
     backgroundColor: colors.surfaceSoft,
@@ -512,36 +348,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
   },
-  rpmButton: {
-    alignItems: 'center',
-    backgroundColor: colors.warning,
-    borderRadius: radii.lg,
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center',
-    marginTop: 12,
-    paddingVertical: 13,
-  },
-  rpmButtonText: {
-    color: colors.background,
-    fontFamily: font.extraBold,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  providerStatus: {
-    color: colors.textMuted,
-    fontFamily: font.medium,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 12,
-  },
-  modeMessage: {
-    color: colors.warning,
-    fontFamily: font.medium,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 8,
-  },
   configCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -549,6 +355,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 16,
     padding: 16,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 14,
+  },
+  colorOption: {
+    borderRadius: radii.pill,
+    height: 40,
+    width: 40,
+  },
+  selectedColor: {
+    borderColor: colors.white,
+    borderWidth: 3,
   },
   saveButton: {
     alignItems: 'center',
