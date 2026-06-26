@@ -36,6 +36,7 @@ export default function AvatarEditorScreen() {
 
   const [name, setName] = useState('Nuevo Jugador');
   const [position, setPosition] = useState<'GK' | 'DF' | 'MF' | 'FW'>('MF');
+  const [shirtNumber, setShirtNumber] = useState('10');
   const [expandedCategory, setExpandedCategory] = useState<string | null>('rostro');
   const [showJson, setShowJson] = useState(false);
 
@@ -44,11 +45,23 @@ export default function AvatarEditorScreen() {
   };
 
   const handleSave = () => {
+    const stats = [
+      config.muscle > 60 ? 80 : 70, // pace
+      70, // shooting
+      75, // passing
+      80, // dribbling
+      config.muscle > 70 ? 75 : 60, // defending
+      Math.round((config.muscle + config.weight / 2) / 1.5) // physical
+    ];
+
+    const overall = Math.round(stats.reduce((a, b) => a + b, 0) / stats.length);
+
     const player: PlayerProfile = {
       id: Math.random().toString(36).substring(7),
       name,
       position,
-      overall: 75, // Valor base
+      shirtNumber: parseInt(shirtNumber) || 10,
+      overall: Math.min(99, Math.max(1, overall)),
       pace: config.muscle > 60 ? 80 : 70,
       shooting: 70,
       passing: 75,
@@ -96,6 +109,19 @@ export default function AvatarEditorScreen() {
                value={name}
                onChangeText={setName}
                placeholder="Ej. Cristiano"
+               placeholderTextColor={colors.textMuted}
+             />
+          </View>
+
+          <View style={styles.nameSection}>
+             <Text style={styles.label}>Número de Camiseta</Text>
+             <TextInput
+               style={styles.nameInput}
+               value={shirtNumber}
+               onChangeText={setShirtNumber}
+               keyboardType="numeric"
+               maxLength={2}
+               placeholder="10"
                placeholderTextColor={colors.textMuted}
              />
           </View>

@@ -85,6 +85,17 @@ export default function PlayerSummaryScreen() {
           <Text style={styles.saveButtonText}>Confirmar y Guardar</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[styles.saveButton, { backgroundColor: '#1e293b' }]}
+          onPress={() => router.push({
+            pathname: '/player-builder/card',
+            params: { player: JSON.stringify(player) }
+          })}
+        >
+          <Ionicons name="id-card-outline" size={24} color={colors.white} />
+          <Text style={[styles.saveButtonText, { color: colors.white }]}>Ver Carta Deportiva</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.editButton} onPress={() => router.back()}>
           <Text style={styles.editButtonText}>Volver al Editor</Text>
         </TouchableOpacity>

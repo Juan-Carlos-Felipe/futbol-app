@@ -94,12 +94,20 @@ export class FaceAnalysisService {
         const face = predictions[0];
 
         // Check confidence
-        if (face.probability && (face.probability as any)[0] < 0.8) {
+        const probability = Array.isArray(face.probability) ? face.probability[0] : (face.probability as any)?.dataSync()[0];
+        if (probability !== undefined && probability < 0.8) {
            throw new FaceAnalysisError('LOW_CONFIDENCE', 'Detección con baja confianza.');
         }
 
-        const landmarks = face.landmarks as any[];
-        const metrics = this.extractMetricsFromLandmarks(face.topLeft, face.bottomRight, landmarks);
+        if (!face.landmarks) {
+          throw new FaceAnalysisError('NO_FACE', 'No se encontraron puntos de referencia faciales.');
+        }
+
+        const metrics = this.extractMetricsFromLandmarks(
+          face.topLeft,
+          face.bottomRight,
+          face.landmarks as [number, number][]
+        );
         return FaceMetricsMapper.mapFaceMetricsToAvatarConfig(metrics);
       } finally {
         imageTensor.dispose();
@@ -112,11 +120,18 @@ export class FaceAnalysisService {
     }
   }
 
-  private static extractMetricsFromLandmarks(topLeft: any, bottomRight: any, landmarks: any[]): FaceMetrics {
+  private static extractMetricsFromLandmarks(
+    topLeft: [number, number] | tf.Tensor1D,
+    bottomRight: [number, number] | tf.Tensor1D,
+    landmarks: [number, number][]
+  ): FaceMetrics {
     const [rightEye, leftEye, nose, mouth] = landmarks;
 
-    const faceWidth = (bottomRight as [number, number])[0] - (topLeft as [number, number])[0];
-    const faceHeight = (bottomRight as [number, number])[1] - (topLeft as [number, number])[1];
+    const tl = (Array.isArray(topLeft) ? topLeft : (topLeft as any).dataSync()) as [number, number];
+    const br = (Array.isArray(bottomRight) ? bottomRight : (bottomRight as any).dataSync()) as [number, number];
+
+    const faceWidth = br[0] - tl[0];
+    const faceHeight = br[1] - tl[1];
 
     const eyeDistance = Math.hypot(leftEye[0] - rightEye[0], leftEye[1] - rightEye[1]);
     const noseToMouth = Math.abs(mouth[1] - nose[1]);

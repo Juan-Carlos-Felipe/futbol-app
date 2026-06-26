@@ -17,10 +17,13 @@ export interface AvatarConfig {
   muscle: number;
 }
 
+export type CardTheme = 'bronze' | 'silver' | 'gold' | 'elite';
+
 export interface PlayerProfile {
   id: string;
   name: string;
   position: 'GK' | 'DF' | 'MF' | 'FW';
+  shirtNumber: number;
   overall: number;
   pace: number;
   shooting: number;
@@ -29,6 +32,8 @@ export interface PlayerProfile {
   defending: number;
   physical: number;
   avatarConfig: AvatarConfig;
+  cardImageUri?: string;
+  cardTheme?: CardTheme;
   createdAt: string;
   updatedAt: string;
 }

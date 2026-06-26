@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, Alert, Image } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { colors, font, spacing, shadows } from '@/lib/theme';
 import { PlayerProfile } from '@/modules/player-builder/types';
 import { PlayerRepository } from '@/modules/player-builder/repositories/PlayerRepository';
+import { AvatarPreview3D } from '@/modules/player-builder/components/AvatarPreview3D';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function MyPlayersScreen() {
@@ -43,9 +44,20 @@ export default function MyPlayersScreen() {
   const renderItem = ({ item }: { item: PlayerProfile }) => (
     <View style={styles.playerCard}>
       <View style={styles.playerInfo}>
-        <View style={styles.miniBadge}>
-          <Text style={styles.miniOvr}>{item.overall}</Text>
-        </View>
+        <TouchableOpacity
+          onPress={() => router.push({
+            pathname: '/player-builder/card',
+            params: { player: JSON.stringify(item) }
+          })}
+        >
+          {item.cardImageUri ? (
+            <Image source={{ uri: item.cardImageUri }} style={styles.miniCardImage} />
+          ) : (
+            <View style={styles.miniBadge}>
+               <AvatarPreview3D config={item.avatarConfig} mode="thumbnail" />
+            </View>
+          )}
+        </TouchableOpacity>
         <View>
           <Text style={styles.playerName}>{item.name}</Text>
           <Text style={styles.playerPos}>{item.position}</Text>
@@ -157,6 +169,13 @@ const styles = StyleSheet.create({
     fontFamily: font.bold,
     fontSize: 16,
     color: colors.white,
+  },
+  miniCardImage: {
+    width: 50,
+    height: 70,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   playerPos: {
     fontFamily: font.medium,

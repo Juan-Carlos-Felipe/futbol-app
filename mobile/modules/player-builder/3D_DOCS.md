@@ -30,8 +30,13 @@ The `AvatarBlendshapeService` is prepared to apply the following blendshapes if 
 These blendshapes should map 0-1 range from the 0-100 values in `AvatarConfig`.
 
 ### Connecting Phase 4
-Phase 4 will focus on:
+Phase 4 completed:
+- Player Card visualization with dynamic themes (Bronze to Elite).
+- Exporting the player card as a PNG using `react-native-view-shot`.
+- Sharing the card via native share dialogs.
+- Automatic Overall calculation based on stats.
+
+Phase 5 will focus on:
 - Actual athletic animations (idle, celebration).
 - High-fidelity textures and professional lighting.
-- Exporting the player card as a PNG.
 - Expanded wardrobe (jerseys, boots).
