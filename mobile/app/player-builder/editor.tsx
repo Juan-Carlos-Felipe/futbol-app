@@ -4,6 +4,7 @@ import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { colors, font, spacing, shadows } from '@/lib/theme';
 import { AvatarConfig, PlayerProfile } from '@/modules/player-builder/types';
 import { AvatarConfigGenerator } from '@/modules/player-builder/services/AvatarConfigGenerator';
+import { AvatarPreview3D } from '@/modules/player-builder/components/AvatarPreview3D';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 
@@ -84,6 +85,10 @@ export default function AvatarEditorScreen() {
 
       <View style={styles.mainLayout}>
         <View style={styles.editorContent}>
+          <View style={styles.previewSection}>
+            <AvatarPreview3D config={config} />
+          </View>
+
           <View style={styles.nameSection}>
              <Text style={styles.label}>Nombre del Jugador</Text>
              <TextInput
@@ -224,6 +229,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  previewSection: {
+    marginBottom: spacing.lg,
   },
   scroll: {
     flex: 1,

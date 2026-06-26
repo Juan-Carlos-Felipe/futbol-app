@@ -57,7 +57,15 @@ export default function PlayerBuilderHome() {
   );
 }
 
-function MenuButton({ title, subtitle, icon, onPress, primary }: any) {
+interface MenuButtonProps {
+  title: string;
+  subtitle: string;
+  icon: any;
+  onPress: () => void;
+  primary?: boolean;
+}
+
+function MenuButton({ title, subtitle, icon, onPress, primary }: MenuButtonProps) {
   return (
     <TouchableOpacity
       style={[styles.button, primary && styles.primaryButton]}

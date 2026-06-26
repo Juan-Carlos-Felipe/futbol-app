@@ -4,6 +4,7 @@ import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { colors, font, spacing, shadows } from '@/lib/theme';
 import { PlayerProfile } from '@/modules/player-builder/types';
 import { PlayerRepository } from '@/modules/player-builder/repositories/PlayerRepository';
+import { AvatarPreview3D } from '@/modules/player-builder/components/AvatarPreview3D';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function PlayerSummaryScreen() {
@@ -44,6 +45,10 @@ export default function PlayerSummaryScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.previewContainerTop}>
+          <AvatarPreview3D config={player.avatarConfig} />
+        </View>
+
         <View style={styles.card}>
           <View style={styles.cardHeader}>
              <View style={styles.overallContainer}>
@@ -198,6 +203,9 @@ const styles = StyleSheet.create({
     color: colors.textSubtle,
     fontFamily: 'monospace',
     fontSize: 12,
+  },
+  previewContainerTop: {
+    marginBottom: spacing.xl,
   },
   saveButton: {
     backgroundColor: colors.accent,
